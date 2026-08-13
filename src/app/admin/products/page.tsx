@@ -4,10 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { Product, PurchaseOptions } from '@/types';
 import { ProductService } from '@/services/products';
 import { categories } from '@/data/categories';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, translateCountry } from '@/lib/utils';
+import { useLocaleStore } from '@/store/locale-store';
 import { Plus, Edit, Trash2, Check, X, ShieldAlert } from 'lucide-react';
 
 export default function AdminProductsPage() {
+  const { locale, t } = useLocaleStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -182,14 +184,15 @@ export default function AdminProductsPage() {
       {/* Title & Actions */}
       <div className="flex justify-between items-center border-b border-light-border pb-4">
         <div className="text-xs text-gray-500 font-medium">
-          Total in catalog: <strong>{products.length} products</strong>
+          {locale === 'ar' ? 'إجمالي المنتجات في الكتالوج: ' : 'Total in catalog: '}
+          <strong>{products.length} {locale === 'ar' ? 'منتج' : 'products'}</strong>
         </div>
         <button
           onClick={handleOpenAddModal}
           className="px-4 py-2 bg-primary text-cream hover:bg-primary-dark font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
         >
           <Plus className="w-4 h-4" />
-          <span>Add New Product</span>
+          <span>{locale === 'ar' ? 'إضافة منتج جديد' : 'Add New Product'}</span>
         </button>
       </div>
 
@@ -204,13 +207,13 @@ export default function AdminProductsPage() {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-gray-50 border-b border-light-border text-gray-500 font-bold uppercase tracking-wider">
-                  <th className="p-4">Item details</th>
-                  <th className="p-4">Brand / Origin</th>
-                  <th className="p-4">Category</th>
-                  <th className="p-4">Single Price</th>
-                  <th className="p-4">Stock</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Actions</th>
+                  <th className="p-4">{locale === 'ar' ? 'تفاصيل المنتج' : 'Item details'}</th>
+                  <th className="p-4">{locale === 'ar' ? 'الماركة / بلد المنشأ' : 'Brand / Origin'}</th>
+                  <th className="p-4">{locale === 'ar' ? 'القسم' : 'Category'}</th>
+                  <th className="p-4">{locale === 'ar' ? 'سعر الحبة' : 'Single Price'}</th>
+                  <th className="p-4">{locale === 'ar' ? 'المخزون الحالي' : 'Stock'}</th>
+                  <th className="p-4">{locale === 'ar' ? 'حالة البيع' : 'Status'}</th>
+                  <th className="p-4 text-right">{locale === 'ar' ? 'الإجراءات' : 'Actions'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-light-border">
@@ -225,27 +228,29 @@ export default function AdminProductsPage() {
                         className="w-10 h-10 object-cover rounded-md border border-light-border bg-gray-50"
                       />
                       <div className="space-y-0.5">
-                        <strong className="text-dark block font-semibold text-[13px]">{prod.name}</strong>
+                        <strong className="text-dark block font-semibold text-[13px]">
+                          {locale === 'ar' ? prod.arabicName : prod.name}
+                        </strong>
                         <span className="text-[10px] text-gray-400 font-medium font-mono">{prod.id} • {prod.weight}</span>
                       </div>
                     </td>
 
                     <td className="p-4">
                       <span className="block font-semibold text-dark">{prod.brand}</span>
-                      <span className="text-[10px] text-gray-400">{prod.country}</span>
+                      <span className="text-[10px] text-gray-400">{translateCountry(prod.country, locale)}</span>
                     </td>
 
-                    <td className="p-4 uppercase font-semibold text-gray-500 text-[10px]">{prod.category}</td>
+                    <td className="p-4 uppercase font-semibold text-gray-500 text-[10px]">{t(`cat.${prod.category}`)}</td>
 
                     <td className="p-4 font-bold text-primary text-sm">
-                      {formatPrice(prod.purchaseOptions.single.price)}
+                      {formatPrice(prod.purchaseOptions.single.price, locale)}
                     </td>
 
                     <td className="p-4 font-semibold text-dark">
                       {prod.stock === 0 ? (
-                        <span className="text-red-650 font-bold">Out of stock</span>
+                        <span className="text-red-650 font-bold">{locale === 'ar' ? 'نفد من المخزن' : 'Out of stock'}</span>
                       ) : (
-                        <span>{prod.stock} units</span>
+                        <span>{prod.stock} {locale === 'ar' ? 'وحدة' : 'units'}</span>
                       )}
                     </td>
 
@@ -259,7 +264,9 @@ export default function AdminProductsPage() {
                             : 'bg-red-50 text-red-650 border border-red-200'
                         }`}
                       >
-                        {prod.active !== false ? 'Enabled' : 'Disabled'}
+                        {prod.active !== false 
+                          ? (locale === 'ar' ? 'نشط' : 'Enabled') 
+                          : (locale === 'ar' ? 'معطل' : 'Disabled')}
                       </button>
                     </td>
 

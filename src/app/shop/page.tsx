@@ -8,6 +8,7 @@ import { categories } from '@/data/categories';
 import { useLocaleStore } from '@/store/locale-store';
 import ProductCard from '@/components/products/product-card';
 import { SlidersHorizontal, ArrowUpDown, RefreshCw, Check } from 'lucide-react';
+import { translateCountry } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -187,7 +188,7 @@ function ShopContent() {
                       : 'text-gray-600 hover:bg-gray-50'
                   }`}
                 >
-                  <span>{country}</span>
+                  <span>{translateCountry(country, locale)}</span>
                   {selectedCountries.includes(country) && <Check className="w-3.5 h-3.5 text-primary" />}
                 </button>
               ))}

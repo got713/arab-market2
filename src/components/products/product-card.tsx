@@ -6,7 +6,7 @@ import { Product } from '@/types';
 import { useCartStore } from '@/store/cart-store';
 import { useWishlistStore } from '@/store/wishlist-store';
 import { useLocaleStore } from '@/store/locale-store';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, translateCountry } from '@/lib/utils';
 import { Heart, ShoppingCart, Star, Check } from 'lucide-react';
 
 interface ProductCardProps {
@@ -52,7 +52,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Country Badge */}
         <div className="absolute top-2 left-2 rtl:left-auto rtl:right-2 bg-white/95 border border-light-border px-2 py-0.5 rounded-md text-[10px] font-semibold text-dark flex items-center gap-1">
           <span>{product.country === 'Egypt' ? '🇪🇬' : product.country === 'Palestine' ? '🇵🇸' : product.country === 'Lebanon' ? '🇱🇧' : product.country === 'Jordan' ? '🇯🇴' : product.country === 'Syria' ? '🇸🇾' : product.country === 'Saudi Arabia' ? '🇸🇦' : product.country === 'Morocco' ? '🇲🇦' : '🌍'}</span>
-          <span>{product.country}</span>
+          <span>{translateCountry(product.country, locale)}</span>
         </div>
 
         {/* Wishlist Button */}

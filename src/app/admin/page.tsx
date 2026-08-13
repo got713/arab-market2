@@ -7,6 +7,7 @@ import { OrderService } from '@/services/orders';
 import { ProductService } from '@/services/products';
 import { Order, Product, Customer } from '@/types';
 import { formatDate, formatPrice } from '@/lib/utils';
+import { useLocaleStore } from '@/store/locale-store';
 import { 
   DollarSign, 
   ShoppingBag, 
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
+  const { locale } = useLocaleStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -121,11 +123,13 @@ export default function AdminDashboardPage() {
         {/* Total Revenue */}
         <div className="bg-white border border-light-border p-5 rounded-xl shadow-xs flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Total Revenue</span>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+              {locale === 'ar' ? 'إجمالي المبيعات' : 'Total Revenue'}
+            </span>
             <strong className="text-xl font-bold text-dark">{formatPrice(stats.revenue)}</strong>
             <span className="text-[10px] text-green-600 font-semibold flex items-center gap-0.5 leading-none">
               <TrendingUp className="w-3 h-3" />
-              <span>+12% vs last month</span>
+              <span>{locale === 'ar' ? '+12% عن الشهر الماضي' : '+12% vs last month'}</span>
             </span>
           </div>
           <div className="p-3 bg-green-50 text-green-700 rounded-lg">
@@ -136,11 +140,13 @@ export default function AdminDashboardPage() {
         {/* Orders count */}
         <div className="bg-white border border-light-border p-5 rounded-xl shadow-xs flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Total Orders</span>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+              {locale === 'ar' ? 'إجمالي الطلبات' : 'Total Orders'}
+            </span>
             <strong className="text-xl font-bold text-dark">{stats.ordersCount.toLocaleString()}</strong>
             <span className="text-[10px] text-green-600 font-semibold flex items-center gap-0.5 leading-none">
               <TrendingUp className="w-3 h-3" />
-              <span>+8.4% growth</span>
+              <span>{locale === 'ar' ? '+8.4% معدل نمو' : '+8.4% growth'}</span>
             </span>
           </div>
           <div className="p-3 bg-primary/10 text-primary rounded-lg">
@@ -151,11 +157,13 @@ export default function AdminDashboardPage() {
         {/* Customers count */}
         <div className="bg-white border border-light-border p-5 rounded-xl shadow-xs flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Total Customers</span>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+              {locale === 'ar' ? 'عدد العملاء' : 'Total Customers'}
+            </span>
             <strong className="text-xl font-bold text-dark">{stats.customersCount}</strong>
             <span className="text-[10px] text-green-600 font-semibold flex items-center gap-0.5 leading-none">
               <TrendingUp className="w-3 h-3" />
-              <span>+15 new signups</span>
+              <span>{locale === 'ar' ? '+15 عملاء جدد' : '+15 new signups'}</span>
             </span>
           </div>
           <div className="p-3 bg-gold/15 text-gold rounded-lg">
@@ -166,10 +174,12 @@ export default function AdminDashboardPage() {
         {/* Products count */}
         <div className="bg-white border border-light-border p-5 rounded-xl shadow-xs flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Active Products</span>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+              {locale === 'ar' ? 'المنتجات الفعالة' : 'Active Products'}
+            </span>
             <strong className="text-xl font-bold text-dark">{stats.productsCount}</strong>
             <span className="text-[10px] text-gray-500 font-medium leading-none">
-              Across 10 categories
+              {locale === 'ar' ? 'موزعة على 10 أقسام' : 'Across 10 categories'}
             </span>
           </div>
           <div className="p-3 bg-cream text-primary border border-light-border rounded-lg">
@@ -180,18 +190,19 @@ export default function AdminDashboardPage() {
         {/* Average Order Value */}
         <div className="bg-white border border-light-border p-5 rounded-xl shadow-xs flex items-center justify-between col-span-1 sm:col-span-2 lg:col-span-1">
           <div className="space-y-1">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Average Order Value</span>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+              {locale === 'ar' ? 'متوسط قيمة الطلب' : 'Average Order Value'}
+            </span>
             <strong className="text-xl font-bold text-dark">{formatPrice(stats.aov)}</strong>
             <span className="text-[10px] text-green-600 font-semibold flex items-center gap-0.5 leading-none">
               <TrendingUp className="w-3 h-3" />
-              <span>+2.3% AOV</span>
+              <span>{locale === 'ar' ? '+2.3% متوسط قيمة الطلب' : '+2.3% AOV'}</span>
             </span>
           </div>
           <div className="p-3 bg-gray-50 text-gray-600 rounded-lg">
             <TrendingUp className="w-5 h-5 text-gray-500" />
           </div>
         </div>
-
       </div>
 
       {/* Analytics Graph Panels */}
@@ -200,7 +211,7 @@ export default function AdminDashboardPage() {
         {/* Sales trend - Line SVG chart */}
         <div className="lg:col-span-2 bg-white border border-light-border p-5 rounded-xl shadow-xs space-y-4">
           <h3 className="font-bold text-sm text-dark uppercase tracking-wider border-b border-light-border pb-3">
-            Revenue Performance trend
+            {locale === 'ar' ? 'مؤشر أداء الإيرادات' : 'Revenue Performance trend'}
           </h3>
           <div className="relative w-full h-56 bg-cream/10 rounded-lg border border-light-border p-4 flex items-end">
             {/* SVG line */}
@@ -224,14 +235,14 @@ export default function AdminDashboardPage() {
             
             {/* Month indicators */}
             <div className="flex justify-between w-full text-[9px] text-gray-400 font-bold uppercase pt-2 z-10 select-none px-2">
-              <span>Jan</span>
-              <span>Feb</span>
-              <span>Mar</span>
-              <span>Apr</span>
-              <span>May</span>
-              <span>Jun</span>
-              <span>Jul</span>
-              <span>Aug</span>
+              <span>{locale === 'ar' ? 'يناير' : 'Jan'}</span>
+              <span>{locale === 'ar' ? 'فبراير' : 'Feb'}</span>
+              <span>{locale === 'ar' ? 'مارس' : 'Mar'}</span>
+              <span>{locale === 'ar' ? 'أبريل' : 'Apr'}</span>
+              <span>{locale === 'ar' ? 'مايو' : 'May'}</span>
+              <span>{locale === 'ar' ? 'يونيو' : 'Jun'}</span>
+              <span>{locale === 'ar' ? 'يوليو' : 'Jul'}</span>
+              <span>{locale === 'ar' ? 'أغسطس' : 'Aug'}</span>
             </div>
           </div>
         </div>
@@ -239,7 +250,7 @@ export default function AdminDashboardPage() {
         {/* Orders trend - Bar SVG chart */}
         <div className="bg-white border border-light-border p-5 rounded-xl shadow-xs space-y-4">
           <h3 className="font-bold text-sm text-dark uppercase tracking-wider border-b border-light-border pb-3">
-            Monthly Order Quantity
+            {locale === 'ar' ? 'كمية الطلبات الشهرية' : 'Monthly Order Quantity'}
           </h3>
           <div className="w-full h-56 flex items-end justify-between p-4 bg-cream/10 rounded-lg border border-light-border gap-2 select-none">
             {orderBars.map((bar, idx) => (
@@ -249,7 +260,9 @@ export default function AdminDashboardPage() {
                   style={{ height: `${(bar.val / 120) * 100}%` }}
                   title={`${bar.val} orders`}
                 />
-                <span className="text-[8px] text-gray-400 font-bold uppercase">{bar.label}</span>
+                <span className="text-[8px] text-gray-400 font-bold uppercase">
+                  {locale === 'ar' ? (bar.label === 'Jan' ? 'ينا' : bar.label === 'Feb' ? 'فبر' : bar.label === 'Mar' ? 'مار' : bar.label === 'Apr' ? 'أبر' : bar.label === 'May' ? 'ماي' : bar.label === 'Jun' ? 'يون' : bar.label === 'Jul' ? 'يول' : 'أغس') : bar.label}
+                </span>
               </div>
             ))}
           </div>
@@ -264,14 +277,14 @@ export default function AdminDashboardPage() {
         <div className="lg:col-span-2 bg-white border border-light-border rounded-xl shadow-xs p-5 space-y-4">
           <div className="flex justify-between items-center border-b border-light-border pb-3">
             <h3 className="font-bold text-sm text-dark uppercase tracking-wider">
-              Recent Store Orders
+              {locale === 'ar' ? 'أحدث الطلبات المستلمة' : 'Recent Store Orders'}
             </h3>
             <Link 
               href="/admin/orders" 
               className="text-xs text-primary hover:text-gold font-bold flex items-center gap-0.5"
             >
-              <span>View All Orders</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>{locale === 'ar' ? 'عرض كافة الطلبات' : 'View All Orders'}</span>
+              <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
             </Link>
           </div>
 
@@ -279,11 +292,11 @@ export default function AdminDashboardPage() {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-gray-50 border-b border-light-border text-gray-500 font-bold">
-                  <th className="p-3">Order ID</th>
-                  <th className="p-3">Customer</th>
-                  <th className="p-3">Total Paid</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3">Change Status</th>
+                  <th className="p-3">{locale === 'ar' ? 'رقم الطلب' : 'Order ID'}</th>
+                  <th className="p-3">{locale === 'ar' ? 'العميل' : 'Customer'}</th>
+                  <th className="p-3">{locale === 'ar' ? 'إجمالي المدفوع' : 'Total Paid'}</th>
+                  <th className="p-3">{locale === 'ar' ? 'حالة الطلب' : 'Status'}</th>
+                  <th className="p-3">{locale === 'ar' ? 'تغيير الحالة' : 'Change Status'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -291,7 +304,7 @@ export default function AdminDashboardPage() {
                   <tr key={order.id} className="hover:bg-cream/10 transition-colors">
                     <td className="p-3 font-semibold text-primary font-mono">{order.id}</td>
                     <td className="p-3 text-dark font-medium">{order.customer.name}</td>
-                    <td className="p-3 font-bold text-dark">{formatPrice(order.total)}</td>
+                    <td className="p-3 font-bold text-dark">{formatPrice(order.total, locale)}</td>
                     <td className="p-3">
                       <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
                         order.status === 'Delivered' 
@@ -300,7 +313,7 @@ export default function AdminDashboardPage() {
                           ? 'bg-red-100 text-red-700'
                           : 'bg-primary/10 text-primary'
                       }`}>
-                        {order.status}
+                        {locale === 'ar' ? (order.status === 'Pending' ? 'معلق' : order.status === 'Processing' ? 'جاري التجهيز' : order.status === 'Shipped' ? 'تم الشحن' : order.status === 'Out for Delivery' ? 'مع المندوب' : order.status === 'Delivered' ? 'تم التسليم' : 'ملغي') : order.status}
                       </span>
                     </td>
                     <td className="p-3">
@@ -309,12 +322,12 @@ export default function AdminDashboardPage() {
                         onChange={(e) => handleStatusChange(order.id, e.target.value as Order['status'])}
                         className="bg-gray-50 border border-gray-300 rounded px-1.5 py-1 text-[10px] focus:outline-none focus:border-primary"
                       >
-                        <option value="Pending">Pending</option>
-                        <option value="Processing">Processing</option>
-                        <option value="Shipped">Shipped</option>
-                        <option value="Out for Delivery">Out for Delivery</option>
-                        <option value="Delivered">Delivered</option>
-                        <option value="Cancelled">Cancelled</option>
+                        <option value="Pending">{locale === 'ar' ? 'معلق' : 'Pending'}</option>
+                        <option value="Processing">{locale === 'ar' ? 'جاري التجهيز' : 'Processing'}</option>
+                        <option value="Shipped">{locale === 'ar' ? 'تم الشحن' : 'Shipped'}</option>
+                        <option value="Out for Delivery">{locale === 'ar' ? 'مع المندوب للتوصيل' : 'Out for Delivery'}</option>
+                        <option value="Delivered">{locale === 'ar' ? 'تم التسليم' : 'Delivered'}</option>
+                        <option value="Cancelled">{locale === 'ar' ? 'إلغاء الطلب' : 'Cancelled'}</option>
                       </select>
                     </td>
                   </tr>
@@ -329,27 +342,29 @@ export default function AdminDashboardPage() {
           <div className="flex justify-between items-center border-b border-light-border pb-3">
             <h3 className="font-bold text-sm text-dark uppercase tracking-wider flex items-center gap-1.5">
               <AlertTriangle className="w-4.5 h-4.5 text-red-650" />
-              <span>Stock warnings</span>
+              <span>{locale === 'ar' ? 'تحذيرات المخزون' : 'Stock warnings'}</span>
             </h3>
             <Link 
               href="/admin/inventory" 
               className="text-xs text-primary hover:text-gold font-bold flex items-center gap-0.5"
             >
-              <span>Manage Inventory</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>{locale === 'ar' ? 'إدارة المستودع' : 'Manage Inventory'}</span>
+              <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
             </Link>
           </div>
 
           {lowStock.length === 0 ? (
             <p className="text-xs text-gray-500 py-6 text-center">
-              ✓ All products have healthy stock levels.
+              {locale === 'ar' ? '✓ جميع المنتجات بمستويات مخزون سليمة.' : '✓ All products have healthy stock levels.'}
             </p>
           ) : (
             <div className="divide-y divide-gray-100 space-y-3.5">
               {lowStock.map((prod) => (
                 <div key={prod.id} className="pt-3.5 flex items-center justify-between text-xs gap-3">
                   <div>
-                    <strong className="text-dark block line-clamp-1">{prod.name}</strong>
+                    <strong className="text-dark block line-clamp-1">
+                      {locale === 'ar' ? prod.arabicName : prod.name}
+                    </strong>
                     <span className="text-[10px] text-gray-400">{prod.brand} • {prod.weight}</span>
                   </div>
                   <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] ${
@@ -357,7 +372,7 @@ export default function AdminDashboardPage() {
                       ? 'bg-red-100 text-red-700' 
                       : 'bg-amber-100 text-amber-700'
                   }`}>
-                    {prod.stock === 0 ? 'Out' : `${prod.stock} left`}
+                    {prod.stock === 0 ? (locale === 'ar' ? 'نفد' : 'Out') : `${prod.stock} ${locale === 'ar' ? 'متبقي' : 'left'}`}
                   </span>
                 </div>
               ))}

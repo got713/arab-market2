@@ -7,7 +7,7 @@ import { ProductService } from '@/services/products';
 import { useCartStore } from '@/store/cart-store';
 import { useWishlistStore } from '@/store/wishlist-store';
 import { useLocaleStore } from '@/store/locale-store';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, translateCountry } from '@/lib/utils';
 import ProductCard from '@/components/products/product-card';
 import { 
   Heart, 
@@ -132,7 +132,7 @@ export default function ProductDetailPage() {
         <Link href="/shop" className="hover:text-primary transition-colors">{t('nav.shop')}</Link>
         <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" />
         <Link href={`/category/${product.category}`} className="hover:text-primary transition-colors uppercase">
-          {product.category}
+          {t(`cat.${product.category}`)}
         </Link>
         <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" />
         <span className="text-primary truncate max-w-xs">
@@ -202,7 +202,7 @@ export default function ProductDetailPage() {
               <div className="flex items-center gap-1.5">
                 <Globe className="w-4 h-4 text-gold" />
                 <span className="text-muted-text">{t('prod.origin')}:</span>
-                <span className="font-semibold text-dark">{product.country}</span>
+                <span className="font-semibold text-dark">{translateCountry(product.country, locale)}</span>
               </div>
             </div>
           </div>
@@ -413,7 +413,7 @@ export default function ProductDetailPage() {
               </div>
               <div className="grid grid-cols-3 py-2 border-b border-light-border">
                 <span className="text-gray-400 font-semibold">{t('prod.origin')}</span>
-                <span className="col-span-2 text-dark font-medium">{product.country}</span>
+                <span className="col-span-2 text-dark font-medium">{translateCountry(product.country, locale)}</span>
               </div>
               <div className="grid grid-cols-3 py-2 border-b border-light-border">
                 <span className="text-gray-400 font-semibold">{t('prod.ingredients')}</span>

@@ -39,14 +39,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // Admin routes links configuration
   const navItems = [
-    { label: 'Dashboard', path: '/admin', icon: LayoutDashboard },
-    { label: 'Products', path: '/admin/products', icon: ShoppingBag },
-    { label: 'Orders', path: '/admin/orders', icon: ClipboardList },
-    { label: 'Customers', path: '/admin/customers', icon: Users },
-    { label: 'Inventory', path: '/admin/inventory', icon: Warehouse },
-    { label: 'Coupons', path: '/admin/coupons', icon: Ticket },
-    { label: 'Analytics', path: '/admin/analytics', icon: BarChart3 },
-    { label: 'Settings', path: '/admin/settings', icon: Settings },
+    { label: locale === 'ar' ? 'لوحة التحكم' : 'Dashboard', path: '/admin', icon: LayoutDashboard },
+    { label: locale === 'ar' ? 'إدارة المنتجات' : 'Products', path: '/admin/products', icon: ShoppingBag },
+    { label: locale === 'ar' ? 'الطلبات الواردة' : 'Orders', path: '/admin/orders', icon: ClipboardList },
+    { label: locale === 'ar' ? 'قائمة العملاء' : 'Customers', path: '/admin/customers', icon: Users },
+    { label: locale === 'ar' ? 'تتبع المخزون' : 'Inventory', path: '/admin/inventory', icon: Warehouse },
+    { label: locale === 'ar' ? 'كوبونات الخصم' : 'Coupons', path: '/admin/coupons', icon: Ticket },
+    { label: locale === 'ar' ? 'التحليلات المالية' : 'Analytics', path: '/admin/analytics', icon: BarChart3 },
+    { label: locale === 'ar' ? 'إعدادات المتجر' : 'Settings', path: '/admin/settings', icon: Settings },
   ];
 
   // Hydration safety check
@@ -58,16 +58,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // If not logged in as admin, render a lock overlay preventing access
   if (!isAuthenticated || !isAdmin) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 fade-in">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 fade-in" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
         <div className="max-w-md w-full bg-white border border-light-border shadow-lg rounded-2xl p-6 sm:p-8 space-y-6 text-center">
           <div className="w-14 h-14 bg-red-50 text-red-650 rounded-full flex items-center justify-center mx-auto border border-red-150">
             <Lock className="w-6 h-6 text-red-600" />
           </div>
           
           <div className="space-y-2">
-            <h1 className="text-xl font-bold text-dark">Admin Access Denied</h1>
+            <h1 className="text-xl font-bold text-dark">
+              {locale === 'ar' ? 'غير مسموح بالدخول كمسؤول' : 'Admin Access Denied'}
+            </h1>
             <p className="text-xs text-gray-500 max-w-sm mx-auto leading-normal">
-              You must be authenticated with administrator privileges to inspect the Arab Market back office dashboard.
+              {locale === 'ar' 
+                ? 'يجب تسجيل الدخول بصلاحيات المسؤول (Administrator) لتصفح لوحة التحكم الخاصة بمتجر عرب ماركت.'
+                : 'You must be authenticated with administrator privileges to inspect the Arab Market back office dashboard.'}
             </p>
           </div>
 
@@ -79,16 +83,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               }}
               className="w-full py-2.5 bg-primary text-cream rounded-lg text-xs font-bold hover:bg-primary-dark transition-colors flex items-center justify-center gap-1.5"
             >
-              <UserCheck className="w-4 h-4" />
-              <span>Demo Bypass: Login as Admin</span>
+              <UserCheck className="w-4 h-4 text-gold" />
+              <span>{locale === 'ar' ? 'دخول تجريبي سريع: كمسؤول للنظام' : 'Demo Bypass: Login as Admin'}</span>
             </button>
 
             <Link
               href="/"
               className="w-full py-2.5 border border-primary/20 hover:bg-cream/10 text-primary rounded-lg text-xs font-bold block text-center transition-colors flex items-center justify-center gap-1.5"
             >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Return to Storefront</span>
+              <ArrowLeft className="w-4 h-4 text-gold" />
+              <span>{locale === 'ar' ? 'العودة للمتجر الإلكتروني' : 'Return to Storefront'}</span>
             </Link>
           </div>
         </div>
@@ -102,10 +106,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50 text-dark overflow-hidden font-sans">
+    <div className="flex min-h-screen bg-gray-50 text-dark overflow-hidden font-sans" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       
       {/* Sidebar Navigation — Desktop */}
-      <aside className="hidden lg:flex flex-col w-64 bg-primary border-r border-primary-dark text-cream shrink-0">
+      <aside className="hidden lg:flex flex-col w-64 bg-primary border-r border-primary-dark text-cream shrink-0 rtl:border-r-0 rtl:border-l">
         <div className="p-5 border-b border-primary-dark flex items-center justify-between">
           <Link href="/">
             <Logo light={true} variant="full" />
@@ -141,7 +145,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               AD
             </div>
             <div className="text-xs truncate">
-              <strong className="block font-semibold text-white">Administrator</strong>
+              <strong className="block font-semibold text-white">
+                {locale === 'ar' ? 'مشرف النظام' : 'Administrator'}
+              </strong>
               <span className="text-[10px] text-cream/60">admin@arabmarket.com</span>
             </div>
           </div>
@@ -150,7 +156,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             className="w-full py-2 bg-cream/10 hover:bg-red-650 hover:text-white rounded-lg text-[10px] font-bold transition-all flex items-center justify-center gap-1.5"
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span>Logout Backoffice</span>
+            <span>{locale === 'ar' ? 'تسجيل خروج الإدارة' : 'Logout Backoffice'}</span>
           </button>
         </div>
       </aside>
@@ -169,7 +175,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Menu className="w-6 h-6" />
             </button>
             <h1 className="text-lg sm:text-xl font-bold text-dark">
-              {navItems.find((n) => n.path === pathname)?.label || 'Admin Portal'}
+              {navItems.find((n) => n.path === pathname)?.label || (locale === 'ar' ? 'بوابة الإدارة' : 'Admin Portal')}
             </h1>
           </div>
 
@@ -185,8 +191,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               href="/"
               className="px-3.5 py-1.5 bg-cream hover:bg-white text-primary border border-primary/20 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Storefront</span>
+              <ArrowLeft className="w-3.5 h-3.5 rtl:rotate-180" />
+              <span className="hidden sm:inline">{locale === 'ar' ? 'المتجر الإلكتروني' : 'Storefront'}</span>
             </Link>
           </div>
         </header>
@@ -245,7 +251,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 className="w-full py-2 bg-cream/10 rounded-lg text-[10px] font-bold transition-all flex items-center justify-center gap-1"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span>Logout</span>
+                <span>{locale === 'ar' ? 'تسجيل الخروج' : 'Logout'}</span>
               </button>
             </div>
           </aside>

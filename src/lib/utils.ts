@@ -20,3 +20,24 @@ export function formatDate(dateString: string, locale: 'en' | 'ar' = 'en') {
     day: 'numeric',
   });
 }
+
+export function translateCountry(country: string, locale: 'en' | 'ar') {
+  if (locale === 'en') return country;
+  const countryMap: Record<string, string> = {
+    'Egypt': 'مصر',
+    'Lebanon': 'لبنان',
+    'Palestine': 'فلسطين',
+    'Jordan': 'الأردن',
+    'Saudi Arabia': 'السعودية',
+    'Syria': 'سوريا',
+    'UAE': 'الإمارات',
+    'Yemen': 'اليمن',
+    'Turkey': 'تركيا',
+    'Morocco': 'المغرب',
+    'Tunisia': 'تونس',
+    'Algeria': 'الجزائر',
+    'USA': 'أمريكا',
+    'United States': 'الولايات المتحدة'
+  };
+  return countryMap[country] || country;
+}

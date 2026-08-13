@@ -236,19 +236,21 @@ export default function Header() {
                 ) : (
                   <>
                     <div className="px-4 py-2 border-b border-light-border text-center">
-                      <span className="block text-xs text-muted-text mb-2">Demo Quick Logins</span>
+                      <span className="block text-xs text-muted-text mb-2">
+                        {locale === 'ar' ? 'دخول سريع تجريبي' : 'Demo Quick Logins'}
+                      </span>
                       <div className="grid grid-cols-2 gap-1.5">
                         <button
                           onClick={() => handleQuickLogin('customer')}
                           className="bg-primary text-cream px-2 py-1.5 text-xs font-semibold rounded-md hover:bg-primary-dark transition-colors"
                         >
-                          Customer
+                          {locale === 'ar' ? 'عميل' : 'Customer'}
                         </button>
                         <button
                           onClick={() => handleQuickLogin('admin')}
                           className="bg-gold text-dark px-2 py-1.5 text-xs font-semibold rounded-md hover:bg-gold-light transition-colors"
                         >
-                          Admin
+                          {locale === 'ar' ? 'مسؤول' : 'Admin'}
                         </button>
                       </div>
                     </div>
@@ -257,7 +259,7 @@ export default function Header() {
                       onClick={() => setIsAccountMenuOpen(false)}
                       className="block px-4 py-2.5 text-sm text-dark hover:bg-cream/40"
                     >
-                      Go to Login Page
+                      {locale === 'ar' ? 'الذهاب لصفحة الدخول' : 'Go to Login Page'}
                     </Link>
                   </>
                 )}
