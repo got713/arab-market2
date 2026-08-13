@@ -357,7 +357,15 @@ export default function ProductDetailPage() {
           <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl flex items-start gap-2.5 text-xs text-gray-600">
             <Truck className="w-4 h-4 text-gold flex-shrink-0 mt-0.5" />
             <div>
-              <strong>Qualifies for Free Standard Shipping</strong> on orders over $50. Typically ships within 24 hours from New York hubs.
+              {locale === 'ar' ? (
+                <>
+                  <strong>شحن سريع وموثوق</strong> في جميع أنحاء أمريكا. يتم الشحن عادة خلال 24 ساعة من مراكز التوزيع بنيويورك.
+                </>
+              ) : (
+                <>
+                  <strong>Fast & reliable shipping</strong> across America. Typically ships within 24 hours from New York hubs.
+                </>
+              )}
             </div>
           </div>
         </div>

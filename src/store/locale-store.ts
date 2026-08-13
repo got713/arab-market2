@@ -27,7 +27,7 @@ export const translations: TranslationDictionary = {
   'header.account': { en: 'Account', ar: 'حسابي' },
   'header.wishlist': { en: 'Wishlist', ar: 'المفضلة' },
   'header.cart': { en: 'Cart', ar: 'السلة' },
-  'header.announcement': { en: '🚚 Free shipping on orders over $50 across America!', ar: '🚚 شحن مجاني للطلبات الأكثر من 50 دولارًا في جميع أنحاء أمريكا!' },
+  'header.announcement': { en: '', ar: '' },
 
   // Hero Section
   'hero.title': { en: 'Your Favorite Arabic Groceries, Delivered Across America', ar: 'بقالتك العربية المفضلة، تصلك أينما كنت في أمريكا' },

@@ -126,15 +126,10 @@ export const useCartStore = create<CartState>()(
 
       getShippingCost: () => {
         const subtotal = get().getSubtotal();
-        // Free shipping for orders >= $50 (after discount)
         const subtotalAfterDiscount = subtotal - get().getDiscountAmount();
         
         if (subtotalAfterDiscount <= 0 || !get().isDeliveryAvailable) {
           return 0;
-        }
-
-        if (subtotalAfterDiscount >= 50 && get().shippingOption === 'standard') {
-          return 0; // Free Standard shipping
         }
 
         return get().shippingOption === 'express' ? 14.99 : 7.99;

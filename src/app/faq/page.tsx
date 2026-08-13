@@ -27,8 +27,10 @@ export default function FaqPage() {
       a: 'We offer tiered purchasing options. You can choose to buy a "Single" unit, a "Pack" (usually 6 units), or a "Case" (usually 12 units). Buying in packs or cases grants you instant bulk discounts (up to 15% off) which are highlighted during selection.'
     },
     {
-      q: 'How can I get free shipping on my order?',
-      a: 'We offer free Standard Shipping (3-5 business days) across America on all qualifying storefront orders of $50 or more (after coupon discounts are subtracted). For orders below $50, standard shipping is flat $7.99.'
+      q: locale === 'ar' ? 'ما هي تكاليف الشحن وفترات التوصيل؟' : 'What are the shipping rates and delivery timelines?',
+      a: locale === 'ar' 
+        ? 'نحن نقدم أسعار شحن ثابتة في جميع أنحاء الولايات المتحدة. الشحن القياسي (3-5 أيام عمل) متاح مقابل 7.99 دولارًا، والتوصيل السريع (1-2 يوم عمل) مقابل 14.99 دولارًا. يتم شحن المواد القابلة للتلف حصريًا عبر الشحن السريع لضمان جودتها ونضارتها.'
+        : 'We offer flat-rate shipping across the United States. Standard Shipping (3-5 business days) is available for $7.99, and Express Delivery (1-2 business days) is $14.99. Perishable items are shipped exclusively via Express to ensure freshness.'
     },
     {
       q: 'Can I track my shipment in real-time?',
