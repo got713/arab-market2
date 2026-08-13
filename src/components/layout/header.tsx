@@ -11,7 +11,6 @@ import { ProductService } from '@/services/products';
 import { Product } from '@/types';
 import Logo from '../ui/logo';
 import ZipModal from './zip-modal';
-import AnnouncementBar from './announcement-bar';
 import { 
   Search, 
   MapPin, 
@@ -105,8 +104,6 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white shadow-xs border-b border-light-border">
-      <AnnouncementBar />
-      
       {/* Main Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
         {/* Brand Logo */}

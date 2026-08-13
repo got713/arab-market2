@@ -185,7 +185,8 @@ export const useLocaleStore = create<LocaleState>()(
       t: (key) => {
         const item = translations[key];
         if (!item) return key;
-        return item[get().locale] || key;
+        const val = item[get().locale];
+        return val !== undefined ? val : key;
       },
     }),
     {
