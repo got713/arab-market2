@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useLocaleStore } from '@/store/locale-store';
 import { Settings, Save, RefreshCw } from 'lucide-react';
 
 export default function AdminSettingsPage() {
+  const { locale } = useLocaleStore();
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -21,23 +23,25 @@ export default function AdminSettingsPage() {
     setSuccessMsg('');
     setTimeout(() => {
       setLoading(false);
-      setSuccessMsg('Global configurations updated successfully!');
+      setSuccessMsg(locale === 'ar' ? 'تم تحديث الإعدادات بنجاح!' : 'Global configurations updated successfully!');
       setTimeout(() => setSuccessMsg(''), 3000);
     }, 600);
   };
 
   return (
-    <div className="max-w-xl mx-auto space-y-6 fade-in text-xs">
+    <div className="max-w-xl mx-auto space-y-6 fade-in text-xs" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       
       <div className="bg-white border border-light-border rounded-xl shadow-xs p-5 sm:p-6 space-y-4">
         <h3 className="font-bold text-sm text-primary uppercase tracking-wider border-b border-light-border pb-3 flex items-center gap-1.5">
           <Settings className="w-4.5 h-4.5 text-gold" />
-          <span>Global Configurations Settings</span>
+          <span>{locale === 'ar' ? 'إعدادات النظام العامة للمتجر' : 'Global Configurations Settings'}</span>
         </h3>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-gray-400 uppercase">Store Name</label>
+            <label className="text-[10px] font-bold text-gray-400 uppercase">
+              {locale === 'ar' ? 'اسم المتجر' : 'Store Name'}
+            </label>
             <input
               type="text"
               required
@@ -49,7 +53,9 @@ export default function AdminSettingsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">Support Email Desk</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase">
+                {locale === 'ar' ? 'البريد الإلكتروني للدعم الفني' : 'Support Email Desk'}
+              </label>
               <input
                 type="email"
                 required
@@ -59,7 +65,9 @@ export default function AdminSettingsPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">Support Phone</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase">
+                {locale === 'ar' ? 'رقم الهاتف للدعم' : 'Support Phone'}
+              </label>
               <input
                 type="text"
                 required
@@ -71,7 +79,9 @@ export default function AdminSettingsPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-gray-400 uppercase">Distribution Address</label>
+            <label className="text-[10px] font-bold text-gray-400 uppercase">
+              {locale === 'ar' ? 'عنوان مركز التوزيع الرئيسي' : 'Distribution Address'}
+            </label>
             <input
               type="text"
               required
@@ -83,15 +93,17 @@ export default function AdminSettingsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase">Currency Base</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase">
+                {locale === 'ar' ? 'العملة الأساسية للنظام' : 'Currency Base'}
+              </label>
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-gray-300 font-semibold bg-white"
               >
-                <option value="USD">USD ($) - US Dollar</option>
-                <option value="EGP">EGP (ج.م) - Egyptian Pound</option>
-                <option value="AED">AED (د.إ) - UAE Dirham</option>
+                <option value="USD">{locale === 'ar' ? 'دولار أمريكي ($) - USD' : 'USD ($) - US Dollar'}</option>
+                <option value="EGP">{locale === 'ar' ? 'جنيه مصري (ج.م) - EGP' : 'EGP (ج.م) - Egyptian Pound'}</option>
+                <option value="AED">{locale === 'ar' ? 'درهم إماراتي (د.إ) - AED' : 'AED (د.إ) - UAE Dirham'}</option>
               </select>
             </div>
 
@@ -103,8 +115,8 @@ export default function AdminSettingsPage() {
                 onChange={(e) => setAllowGuestCheckout(e.target.checked)}
                 className="w-4 h-4 text-primary accent-primary rounded"
               />
-              <label htmlFor="guestcheckout" className="text-xs font-semibold text-dark">
-                Allow Guest Checkout
+              <label htmlFor="guestcheckout" className="text-xs font-semibold text-dark select-none">
+                {locale === 'ar' ? 'السماح للزوار بالشراء بدون حساب' : 'Allow Guest Checkout'}
               </label>
             </div>
           </div>
@@ -122,7 +134,7 @@ export default function AdminSettingsPage() {
               ) : (
                 <>
                   <Save className="w-3.5 h-3.5 text-gold" />
-                  <span>Save Configuration Settings</span>
+                  <span>{locale === 'ar' ? 'حفظ كافة الإعدادات' : 'Save Configuration Settings'}</span>
                 </>
               )}
             </button>

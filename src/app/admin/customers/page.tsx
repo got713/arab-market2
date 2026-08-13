@@ -4,9 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { db } from '@/services/db';
 import { Customer } from '@/types';
 import { formatPrice } from '@/lib/utils';
+import { useLocaleStore } from '@/store/locale-store';
 import { Users, UserCheck, ShieldAlert, Award } from 'lucide-react';
 
 export default function AdminCustomersPage() {
+  const { locale } = useLocaleStore();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -50,14 +52,16 @@ export default function AdminCustomersPage() {
   }
 
   return (
-    <div className="space-y-6 fade-in">
+    <div className="space-y-6 fade-in" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       
       {/* Benchmarks grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <div className="bg-white border border-light-border p-4 rounded-xl shadow-xs flex items-center justify-between">
           <div className="space-y-0.5">
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Average LTV</span>
-            <strong className="text-lg font-bold text-dark">{formatPrice(avgLTV)}</strong>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">
+              {locale === 'ar' ? 'متوسط قيمة تعاملات العميل (LTV)' : 'Average LTV'}
+            </span>
+            <strong className="text-lg font-bold text-dark">{formatPrice(avgLTV, locale)}</strong>
           </div>
           <div className="p-2.5 bg-primary/10 text-primary rounded-lg">
             <Users className="w-5 h-5 text-gold" />
@@ -66,8 +70,10 @@ export default function AdminCustomersPage() {
 
         <div className="bg-white border border-light-border p-4 rounded-xl shadow-xs flex items-center justify-between">
           <div className="space-y-0.5">
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Total Customer Spend</span>
-            <strong className="text-lg font-bold text-dark">{formatPrice(totalLTV)}</strong>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">
+              {locale === 'ar' ? 'إجمالي تعاملات العملاء' : 'Total Customer Spend'}
+            </span>
+            <strong className="text-lg font-bold text-dark">{formatPrice(totalLTV, locale)}</strong>
           </div>
           <div className="p-2.5 bg-green-50 text-green-700 rounded-lg">
             <UserCheck className="w-5 h-5" />
@@ -76,9 +82,13 @@ export default function AdminCustomersPage() {
 
         <div className="bg-white border border-light-border p-4 rounded-xl shadow-xs flex items-center justify-between">
           <div className="space-y-0.5">
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">V.I.P. Customer</span>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">
+              {locale === 'ar' ? 'العميل المميز (V.I.P.)' : 'V.I.P. Customer'}
+            </span>
             <strong className="text-base font-bold text-dark truncate block max-w-[150px]">{topCustomer?.name || 'N/A'}</strong>
-            <span className="text-[9px] text-green-700 font-bold block">{topCustomer ? formatPrice(topCustomer.totalSpent) : ''} spent</span>
+            <span className="text-[9px] text-green-700 font-bold block">
+              {topCustomer ? formatPrice(topCustomer.totalSpent, locale) : ''} {locale === 'ar' ? 'مدفوعات' : 'spent'}
+            </span>
           </div>
           <div className="p-2.5 bg-amber-50 text-amber-700 rounded-lg">
             <Award className="w-5 h-5 text-gold" />
@@ -92,12 +102,12 @@ export default function AdminCustomersPage() {
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-gray-50 border-b border-light-border text-gray-500 font-bold uppercase tracking-wider">
-                <th className="p-4">Customer</th>
-                <th className="p-4">Total Orders</th>
-                <th className="p-4">Lifetime Spent (LTV)</th>
-                <th className="p-4">Last Purchase Date</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right">Actions</th>
+                <th className="p-4">{locale === 'ar' ? 'العميل' : 'Customer'}</th>
+                <th className="p-4">{locale === 'ar' ? 'عدد الطلبات' : 'Total Orders'}</th>
+                <th className="p-4">{locale === 'ar' ? 'إجمالي المدفوع (LTV)' : 'Lifetime Spent (LTV)'}</th>
+                <th className="p-4">{locale === 'ar' ? 'تاريخ آخر شراء' : 'Last Purchase Date'}</th>
+                <th className="p-4">{locale === 'ar' ? 'الحالة' : 'Status'}</th>
+                <th className="p-4 text-right">{locale === 'ar' ? 'الإجراءات' : 'Actions'}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-light-border">
@@ -110,10 +120,12 @@ export default function AdminCustomersPage() {
                   </td>
 
                   {/* Orders */}
-                  <td className="p-4 font-semibold text-dark">{cust.ordersCount} orders</td>
+                  <td className="p-4 font-semibold text-dark">
+                    {cust.ordersCount} {locale === 'ar' ? 'طلبات' : 'orders'}
+                  </td>
 
                   {/* Spent */}
-                  <td className="p-4 font-bold text-primary text-sm">{formatPrice(cust.totalSpent)}</td>
+                  <td className="p-4 font-bold text-primary text-sm">{formatPrice(cust.totalSpent, locale)}</td>
 
                   {/* Last order date */}
                   <td className="p-4 font-medium text-gray-500">{cust.lastOrderDate}</td>
@@ -125,7 +137,7 @@ export default function AdminCustomersPage() {
                         ? 'bg-green-100 text-green-700'
                         : 'bg-red-150 text-red-750'
                     }`}>
-                      {cust.status}
+                      {cust.status === 'Active' ? (locale === 'ar' ? 'نشط' : 'Active') : (locale === 'ar' ? 'معطل' : 'Inactive')}
                     </span>
                   </td>
 
@@ -135,7 +147,9 @@ export default function AdminCustomersPage() {
                       onClick={() => handleToggleStatus(cust)}
                       className="px-3 py-1 border border-gray-300 hover:bg-gray-50 rounded-lg font-bold text-[10px] transition-all"
                     >
-                      {cust.status === 'Active' ? 'Deactivate' : 'Activate'}
+                      {cust.status === 'Active' 
+                        ? (locale === 'ar' ? 'تعطيل الحساب' : 'Deactivate') 
+                        : (locale === 'ar' ? 'تفعيل الحساب' : 'Activate')}
                     </button>
                   </td>
                 </tr>

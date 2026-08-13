@@ -3,9 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { Product } from '@/types';
 import { ProductService } from '@/services/products';
+import { useLocaleStore } from '@/store/locale-store';
+import { translateCountry } from '@/lib/utils';
 import { ShieldAlert, CheckCircle, RefreshCw } from 'lucide-react';
 
 export default function AdminInventoryPage() {
+  const { locale } = useLocaleStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -75,14 +78,16 @@ export default function AdminInventoryPage() {
   }
 
   return (
-    <div className="space-y-6 fade-in">
+    <div className="space-y-6 fade-in" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       
       {/* Alert KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <div className="bg-red-50 border border-red-150 p-4 rounded-xl shadow-xs flex items-center justify-between text-red-700">
           <div>
-            <span className="text-[10px] uppercase font-bold text-red-500 block mb-0.5">Out of Stock</span>
-            <strong className="text-2xl font-bold">{outOfStockCount} items</strong>
+            <span className="text-[10px] uppercase font-bold text-red-500 block mb-0.5">
+              {locale === 'ar' ? 'منفد من المخزن' : 'Out of Stock'}
+            </span>
+            <strong className="text-2xl font-bold">{outOfStockCount} {locale === 'ar' ? 'منتج' : 'items'}</strong>
           </div>
           <div className="p-2.5 bg-red-100 rounded-lg">
             <ShieldAlert className="w-5 h-5 text-red-650" />
@@ -91,8 +96,10 @@ export default function AdminInventoryPage() {
 
         <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl shadow-xs flex items-center justify-between text-amber-700">
           <div>
-            <span className="text-[10px] uppercase font-bold text-amber-500 block mb-0.5">Low stock warnings</span>
-            <strong className="text-2xl font-bold">{lowStockCount} items</strong>
+            <span className="text-[10px] uppercase font-bold text-amber-500 block mb-0.5">
+              {locale === 'ar' ? 'تنبيهات انخفاض المخزون' : 'Low stock warnings'}
+            </span>
+            <strong className="text-2xl font-bold">{lowStockCount} {locale === 'ar' ? 'منتج' : 'items'}</strong>
           </div>
           <div className="p-2.5 bg-amber-100 rounded-lg">
             <ShieldAlert className="w-5 h-5 text-amber-600" />
@@ -101,8 +108,12 @@ export default function AdminInventoryPage() {
 
         <div className="bg-green-50 border border-green-200 p-4 rounded-xl shadow-xs flex items-center justify-between text-green-700">
           <div>
-            <span className="text-[10px] uppercase font-bold text-green-500 block mb-0.5">Healthy Stock Count</span>
-            <strong className="text-2xl font-bold">{products.length - outOfStockCount - lowStockCount} items</strong>
+            <span className="text-[10px] uppercase font-bold text-green-500 block mb-0.5">
+              {locale === 'ar' ? 'مستويات مخزون سليمة' : 'Healthy Stock Count'}
+            </span>
+            <strong className="text-2xl font-bold">
+              {products.length - outOfStockCount - lowStockCount} {locale === 'ar' ? 'منتج' : 'items'}
+            </strong>
           </div>
           <div className="p-2.5 bg-green-100 rounded-lg">
             <CheckCircle className="w-5 h-5 text-green-600" />
@@ -116,12 +127,12 @@ export default function AdminInventoryPage() {
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-gray-50 border-b border-light-border text-gray-500 font-bold uppercase tracking-wider">
-                <th className="p-4">Product details</th>
-                <th className="p-4">Supplier / Brand</th>
-                <th className="p-4">Status Alert</th>
-                <th className="p-4">Unit Weight</th>
-                <th className="p-4">Manage Stock (Units)</th>
-                <th className="p-4 text-right">Quick Save</th>
+                <th className="p-4">{locale === 'ar' ? 'تفاصيل المنتج' : 'Product details'}</th>
+                <th className="p-4">{locale === 'ar' ? 'الماركة / بلد المنشأ' : 'Supplier / Brand'}</th>
+                <th className="p-4">{locale === 'ar' ? 'حالة التنبيه' : 'Status Alert'}</th>
+                <th className="p-4">{locale === 'ar' ? 'وزن الحبة' : 'Unit Weight'}</th>
+                <th className="p-4">{locale === 'ar' ? 'تعديل كمية المخزن' : 'Manage Stock (Units)'}</th>
+                <th className="p-4 text-right">{locale === 'ar' ? 'حفظ سريع' : 'Quick Save'}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-light-border">
@@ -141,7 +152,9 @@ export default function AdminInventoryPage() {
                         className="w-10 h-10 object-cover rounded-md border border-light-border"
                       />
                       <div className="space-y-0.5">
-                        <strong className="text-dark block font-semibold text-[13px]">{p.name}</strong>
+                        <strong className="text-dark block font-semibold text-[13px]">
+                          {locale === 'ar' ? p.arabicName : p.name}
+                        </strong>
                         <span className="text-[10px] text-gray-400 font-medium font-mono">{p.id}</span>
                       </div>
                     </td>
@@ -149,22 +162,22 @@ export default function AdminInventoryPage() {
                     {/* Brand */}
                     <td className="p-4">
                       <span className="block font-semibold text-dark">{p.brand}</span>
-                      <span className="text-[10px] text-gray-400">{p.country}</span>
+                      <span className="text-[10px] text-gray-400">{translateCountry(p.country, locale)}</span>
                     </td>
 
                     {/* Alert status badge */}
                     <td className="p-4">
                       {isOutOfStock ? (
                         <span className="inline-block bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase">
-                          Out of stock
+                          {locale === 'ar' ? 'نفد من المخزن' : 'Out of stock'}
                         </span>
                       ) : isLowStock ? (
                         <span className="inline-block bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase">
-                          Low Stock
+                          {locale === 'ar' ? 'مخزون منخفض' : 'Low Stock'}
                         </span>
                       ) : (
                         <span className="inline-block bg-green-100 text-green-700 px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase">
-                          Healthy
+                          {locale === 'ar' ? 'سليم' : 'Healthy'}
                         </span>
                       )}
                     </td>
@@ -189,12 +202,12 @@ export default function AdminInventoryPage() {
                       <button
                         onClick={() => handleSaveStock(p)}
                         disabled={updatingId === p.id}
-                        className="px-3.5 py-1.5 bg-primary text-cream hover:bg-primary-dark rounded-md font-bold text-[10px] transition-colors flex items-center justify-center gap-1 ml-auto"
+                        className="px-3.5 py-1.5 bg-primary text-cream hover:bg-primary-dark rounded-md font-bold text-[10px] transition-colors flex items-center justify-center gap-1 ml-auto rtl:mr-auto rtl:ml-0"
                       >
                         {updatingId === p.id ? (
                           <RefreshCw className="w-3 h-3 animate-spin" />
                         ) : (
-                          <span>Update</span>
+                          <span>{locale === 'ar' ? 'تحديث' : 'Update'}</span>
                         )}
                       </button>
                     </td>
