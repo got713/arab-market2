@@ -1,26 +1,78 @@
 @import "tailwindcss";
 
+@theme {
+  --color-primary: #123D2F;
+  --color-primary-dark: #0b261d;
+  --color-gold: #C8A24D;
+  --color-gold-light: #dfc17f;
+  --color-cream: #F8F4EA;
+  --color-dark: #222222;
+  --color-muted-text: #6B7280;
+  --color-light-border: #E5E7EB;
+
+  --font-sans: var(--font-poppins), var(--font-cairo), system-ui, -apple-system, sans-serif;
+  --font-cairo: var(--font-cairo), system-ui, -apple-system, sans-serif;
+  
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --primary: #123D2F;
+  --gold: #C8A24D;
+  --cream: #F8F4EA;
+  --dark: #222222;
+  --muted-text: #6B7280;
+  --light-border: #E5E7EB;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--dark);
+  background-color: #ffffff;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+html[lang="ar"] body {
+  font-family: var(--font-cairo), sans-serif;
+}
+
+/* Custom scrollbars for category listing */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Page transitions */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Glassmorphism utility */
+.glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.glass-dark {
+  background: rgba(18, 61, 47, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
