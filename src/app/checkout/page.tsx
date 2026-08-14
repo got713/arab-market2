@@ -301,7 +301,7 @@ export default function CheckoutPage() {
                 <div className="flex justify-between items-center w-full">
                   <span className="font-bold text-sm text-dark">{t('zip.standard')}</span>
                   <span className="text-xs text-primary font-bold">
-                    {subtotal - discount >= 50 ? 'FREE' : '$7.99'}
+                    $7.99
                   </span>
                 </div>
                 <span className="text-xs text-gray-500">Delivered in 3–5 business days</span>
@@ -390,7 +390,7 @@ export default function CheckoutPage() {
           <div className="border border-light-border rounded-xl p-5 bg-cream/35 space-y-6">
             <h3 className="font-bold text-sm text-primary uppercase tracking-wider pb-3 border-b border-light-border flex items-center gap-1.5">
               <ShoppingBag className="w-4 h-4 text-gold" />
-              <span>Review Order Items</span>
+              <span>5. {locale === 'ar' ? 'مراجعة وتأكيد الطلب' : 'Order Review'}</span>
             </h3>
 
             {/* Small listing */}
@@ -432,7 +432,7 @@ export default function CheckoutPage() {
               <div className="flex justify-between">
                 <span>Shipping Cost</span>
                 <span className="font-semibold text-dark">
-                  {shipping === 0 ? 'FREE' : formatPrice(shipping, locale)}
+                  {formatPrice(shipping, locale)}
                 </span>
               </div>
             </div>

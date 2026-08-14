@@ -14,29 +14,33 @@ import {
   ShieldCheck, 
   ArrowRight,
   Sparkles,
-  Pyramid,
-  Compass,
-  Sun,
-  Moon,
   Snowflake,
   Cookie,
   Coffee,
   Flame,
   Home,
-  ChevronRight
+  ChevronRight,
+  Carrot,
+  Milk,
+  Beef,
+  Utensils,
+  Package,
+  Wheat
 } from 'lucide-react';
 
 // Map icon names to Lucide icons
 const iconMap: Record<string, React.ComponentType<any>> = {
-  Pyramid,
-  Compass,
-  Sun,
-  Moon,
   ShoppingBag,
   Snowflake,
-  Cookie,
+  Carrot,
+  Milk,
+  Beef,
   Coffee,
+  Cookie,
   Flame,
+  Utensils,
+  Package,
+  Wheat,
   Home
 };
 
@@ -163,11 +167,11 @@ export default function HomePage() {
         <div className="flex justify-between items-end mb-8">
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold text-dark">{t('nav.categories')}</h2>
-            <p className="text-xs sm:text-sm text-muted-text mt-1">{locale === 'ar' ? 'تصفح منتجاتنا بحسب بلدانها أو تصنيفاتها الغذائية' : 'Explore by regional specialty or product type'}</p>
+            <p className="text-xs sm:text-sm text-muted-text mt-1">{locale === 'ar' ? 'تصفح تشكيلة واسعة من البقالة والأغذية الطازجة والمجمدة والمستلزمات اليومية' : 'Browse our premium selection of grocery, pantry, fresh, and frozen essentials'}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
           {categories.map((cat) => {
             const IconComponent = iconMap[cat.iconName] || ShoppingBag;
             return (

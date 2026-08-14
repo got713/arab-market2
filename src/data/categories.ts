@@ -10,92 +10,110 @@ export interface CategoryInfo {
 
 export const categories: CategoryInfo[] = [
   {
-    slug: 'egyptian',
-    name: 'Egyptian Foods',
-    arabicName: 'المأكولات المصرية',
-    description: 'Authentic flavors from Cairo and Alexandria, including Molokhia, Koshary items, and Fava Beans.',
-    arabicDescription: 'النكهات المصرية الأصيلة من القاهرة والإسكندرية، بما في ذلك الملوخية والفسيخ والكشري والفول المدمس.',
-    image: 'https://images.unsplash.com/photo-1541518763669-27fef04b14ea?q=80&w=600&auto=format&fit=crop',
-    iconName: 'Pyramid'
-  },
-  {
-    slug: 'levantine',
-    name: 'Levantine Specialties',
-    arabicName: 'التخصصات الشامية',
-    description: 'Delicacies from Lebanon, Syria, Jordan, and Palestine - Hummus, Tahini, Grape Leaves, and Olive Oils.',
-    arabicDescription: 'مأكولات شهية من لبنان وسوريا والأردن وفلسطين - الحمص والطحينة وورق العنب وزيت الزيتون البكر.',
-    image: 'https://images.unsplash.com/photo-1547058886-f6d62c3f87ec?q=80&w=600&auto=format&fit=crop',
-    iconName: 'Compass'
-  },
-  {
-    slug: 'gulf',
-    name: 'Gulf Selects',
-    arabicName: 'مختارات الخليج',
-    description: 'Kabsa spices, premium Basmati rice, cardamom teas, and dates from the Arabian Peninsula.',
-    arabicDescription: 'بهارات الكبسة، الأرز البسمتي الفاخر، شاي الهيل، والتمور الفاخرة من الجزيرة العربية.',
-    image: 'https://images.unsplash.com/photo-1596797038530-2c107229654b?q=80&w=600&auto=format&fit=crop',
-    iconName: 'Sun'
-  },
-  {
-    slug: 'maghreb',
-    name: 'Maghrebi Delights',
-    arabicName: 'مأكولات المغرب العربي',
-    description: 'Moroccan Couscous, Harissa, mint teas, and unique spices from North Africa.',
-    arabicDescription: 'الكسكس المغربي، الهريسة التونسية، شاي النعناع، والتوابل الفريدة من شمال إفريقيا.',
-    image: 'https://images.unsplash.com/photo-1587314168485-3236d6710814?q=80&w=600&auto=format&fit=crop',
-    iconName: 'Moon'
-  },
-  {
     slug: 'groceries',
-    name: 'Pantry Groceries',
-    arabicName: 'مواد البقالة',
-    description: 'Canned fava beans, chickpeas, extra virgin olive oils, tahini, Halva, and cooking essentials.',
-    arabicDescription: 'الفول المدمس المعلب، الحمص، زيت الزيتون البكر، الطحينة، الحلاوة الطحينية، وأساسيات الطبخ.',
+    name: 'Pantry & Groceries',
+    arabicName: 'البقالة والأغذية الجافة',
+    description: 'Olive oils, ghee, honey, tahini, and dry pantry essentials.',
+    arabicDescription: 'زيت الزيتون، السمن، العسل، الطحينة، وأسس البقالة الجافة.',
     image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=600&auto=format&fit=crop',
     iconName: 'ShoppingBag'
   },
   {
     slug: 'frozen',
     name: 'Frozen Foods',
-    arabicName: 'المجمدات',
-    description: 'Frozen Molokhia, Okra, Falafel patties, and pre-packaged Middle Eastern meals.',
-    arabicDescription: 'الملوخية المجمدة، البامية الممتازة، أقراص الفلافل الجاهزة، والوجبات الشرق أوسطية الجاهزة.',
+    arabicName: 'الأغذية المجمدة',
+    description: 'Frozen vegetables, molokhia, okra, falafel, and ready meals.',
+    arabicDescription: 'الخضروات المجمدة، الملوخية، البامية، الفلافل، والوجبات الجاهزة.',
     image: 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?q=80&w=600&auto=format&fit=crop',
     iconName: 'Snowflake'
   },
   {
-    slug: 'sweets',
-    name: 'Baklava & Sweets',
-    arabicName: 'الحلويات الشرقية',
-    description: 'Freshly baked Baklava, Halva, date cookies, Maamoul, and sweet syrups.',
-    arabicDescription: 'البقلاوة الطازجة، الحلاوة، بسكويت التمر (المعمول)، والقطر المركز.',
+    slug: 'fresh-bakery',
+    name: 'Fresh & Bakery',
+    arabicName: 'المخبوزات والمنتجات الطازجة',
+    description: 'Fresh pita bread, flatbreads, spinach pies, and seasonal produce.',
+    arabicDescription: 'خبز البيتا الطازج، الخبز العربي، فطائر السبانخ، والخضروات الطازجة.',
     image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=600&auto=format&fit=crop',
-    iconName: 'Cookie'
+    iconName: 'Carrot'
+  },
+  {
+    slug: 'dairy-cheese',
+    name: 'Dairy & Cheese',
+    arabicName: 'الألبان والأجبان',
+    description: 'Feta cheese, labneh, halloumi, yogurt, and Middle Eastern dairy.',
+    arabicDescription: 'جبنة الفيتا، اللبنة، الحلوم، الزبادي، ومنتجات الألبان الشرق أوسطية.',
+    image: 'https://images.unsplash.com/photo-1486887396153-fa416525c108?q=80&w=600&auto=format&fit=crop',
+    iconName: 'Milk'
+  },
+  {
+    slug: 'meat-poultry',
+    name: 'Meat & Poultry',
+    arabicName: 'اللحم والدواجن',
+    description: '100% certified Halal beef cuts, lamb, and chicken breasts.',
+    arabicDescription: 'قطع لحم بقري حلال معتمد 100%، ريش الضأن، وصدور الدجاج.',
+    image: 'https://images.unsplash.com/photo-1603048588665-791ca8aea617?q=80&w=600&auto=format&fit=crop',
+    iconName: 'Beef'
   },
   {
     slug: 'beverages',
-    name: 'Beverages & Teas',
-    arabicName: 'المشروبات والشاي',
-    description: 'Turkish coffee, cardamom black tea, herbal infusions, and Barbican malt beverages.',
-    arabicDescription: 'القهوة التركية بالهيل، الشاي الأسود المخمر، شاي الأعشاب، ومشروبات باربيكان الشعير.',
+    name: 'Beverages',
+    arabicName: 'المشروبات والعصائر',
+    description: 'Turkish coffee, premium black teas, herbal infusions, and malt sodas.',
+    arabicDescription: 'القهوة التركية، الشاي الأسود الممتاز، الأعشاب، ومشروبات الشعير.',
     image: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?q=80&w=600&auto=format&fit=crop',
     iconName: 'Coffee'
   },
   {
+    slug: 'sweets-snacks',
+    name: 'Sweets & Snacks',
+    arabicName: 'الحلويات والتسالي',
+    description: 'Fresh Baklava, Maamoul cookies, halvah, and sesame biscuits.',
+    arabicDescription: 'البقلاوة الطازجة، معمول التمر، الحلاوة الطحينية، وبسكويت السمسم.',
+    image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=600&auto=format&fit=crop',
+    iconName: 'Cookie'
+  },
+  {
     slug: 'spices',
     name: 'Spices & Herbs',
-    arabicName: 'البهارات والتوابل',
-    description: 'Zaatar, Sumac, Seven Spices mix, cumin, cardamom, and premium saffron.',
-    arabicDescription: 'الزعتر البري، السماق، السبع بهارات، الكمون المطحون، الهيل، والزعفران الإيراني الفاخر.',
+    arabicName: 'البهارات والأعشاب',
+    description: 'Zaatar, sumac, cumin, cardamom, and premium spice blends.',
+    arabicDescription: 'الزعتر، السماق، الكمون، الهيل، وخلطات التوابل الممتازة.',
     image: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?q=80&w=600&auto=format&fit=crop',
     iconName: 'Flame'
   },
   {
+    slug: 'sauces-condiments',
+    name: 'Sauces & Condiments',
+    arabicName: 'الصلصات والمقبلات',
+    description: 'Premium sesame Tahini paste, hot harissa sauces, and pomegranate molasses.',
+    arabicDescription: 'طحينة السمسم الفاخرة، صلصات الهريسة الحارة، ودبس الرمان.',
+    image: 'https://images.unsplash.com/photo-1470324161839-ce2bb6fa6bc3?q=80&w=600&auto=format&fit=crop',
+    iconName: 'Utensils'
+  },
+  {
+    slug: 'canned-jarred',
+    name: 'Canned & Jarred Foods',
+    arabicName: 'المعلبات والأغذية المحفوظة',
+    description: 'Canned fava beans, chickpeas, pickled olives, and preserved grape leaves.',
+    arabicDescription: 'الفول المدمس المعلب، الحمص، مخلل الزيتون، وورق العنب المحفوظ.',
+    image: 'https://images.unsplash.com/photo-1536630596251-b01b6ace0475?q=80&w=600&auto=format&fit=crop',
+    iconName: 'Package'
+  },
+  {
+    slug: 'grains-pasta',
+    name: 'Rice, Grains & Pasta',
+    arabicName: 'الأرز، الحبوب والمكرونة',
+    description: 'Basmati rice, freekeh, couscous, bulgur, and traditional pastas.',
+    arabicDescription: 'الأرز البسمتي، الفريكة، الكسكسي، البرغل، والمكرونة التقليدية.',
+    image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?q=80&w=600&auto=format&fit=crop',
+    iconName: 'Wheat'
+  },
+  {
     slug: 'household',
-    name: 'Household & Incense',
-    arabicName: 'المستلزمات المنزلية والعود',
-    description: 'Dallah coffee pots, Turkish teacups, Bakhoor, incense burners, and olive oil soaps.',
-    arabicDescription: 'الدلال (أواني القهوة)، كاسات الشاي التركية، البخور والعود، المباخر، وصابون زيت الزيتون.',
+    name: 'Household Essentials',
+    arabicName: 'المستلزمات المنزلية',
+    description: 'Coffee cups, incense, natural olive oil soaps, and home items.',
+    arabicDescription: 'فناجين القهوة، البخور والعود، صابون زيت الزيتون، واللوازم المنزلية.',
     image: 'https://images.unsplash.com/photo-1606722590583-6951b5ea92ad?q=80&w=600&auto=format&fit=crop',
     iconName: 'Home'
   }

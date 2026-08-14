@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Logo from '../ui/logo';
 import { useLocaleStore } from '@/store/locale-store';
+import { categories } from '@/data/categories';
 import { ShieldCheck } from 'lucide-react';
 
 export default function Footer() {
@@ -44,37 +45,32 @@ export default function Footer() {
         {/* Shop Column */}
         <div>
           <h3 className="text-sm font-bold text-gold uppercase tracking-wider mb-4">
-            {locale === 'ar' ? 'تسوق الأقسام' : 'Shop Categories'}
+            {locale === 'ar' ? 'تسوق' : 'Shop'}
           </h3>
           <ul className="space-y-2 text-xs text-cream/80">
             <li>
-              <Link href="/category/egyptian" className="hover:text-gold transition-colors">
-                {t('cat.egyptian')}
+              <Link href="/shop" className="hover:text-gold transition-colors">
+                {locale === 'ar' ? 'كل المنتجات' : 'All Products'}
               </Link>
             </li>
             <li>
-              <Link href="/category/levantine" className="hover:text-gold transition-colors">
-                {t('cat.levantine')}
+              <Link href="/#categories-section" className="hover:text-gold transition-colors">
+                {locale === 'ar' ? 'تصفح الأقسام' : 'Categories'}
               </Link>
             </li>
             <li>
-              <Link href="/category/gulf" className="hover:text-gold transition-colors">
-                {t('cat.gulf')}
+              <Link href="/shop?filter=deals" className="hover:text-gold transition-colors">
+                {t('nav.deals')}
               </Link>
             </li>
             <li>
-              <Link href="/category/maghreb" className="hover:text-gold transition-colors">
-                {t('cat.maghreb')}
+              <Link href="/shop?filter=bestseller" className="hover:text-gold transition-colors">
+                {t('nav.bestsellers')}
               </Link>
             </li>
             <li>
-              <Link href="/category/frozen" className="hover:text-gold transition-colors">
-                {t('cat.frozen')}
-              </Link>
-            </li>
-            <li>
-              <Link href="/category/sweets" className="hover:text-gold transition-colors">
-                {t('cat.sweets')}
+              <Link href="/shop?sort=newest" className="hover:text-gold transition-colors">
+                {t('nav.newarrivals')}
               </Link>
             </li>
           </ul>

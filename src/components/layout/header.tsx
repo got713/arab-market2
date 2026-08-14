@@ -11,6 +11,7 @@ import { ProductService } from '@/services/products';
 import { Product } from '@/types';
 import Logo from '../ui/logo';
 import ZipModal from './zip-modal';
+import { categories } from '@/data/categories';
 import { 
   Search, 
   MapPin, 
@@ -35,6 +36,7 @@ export default function Header() {
   const [isSuggestOpen, setIsSuggestOpen] = useState(false);
   const [isZipOpen, setIsZipOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
   const suggestRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
 
@@ -303,41 +305,116 @@ export default function Header() {
         </div>
       </div>
 
+      {/* Mobile Search Bar */}
+      <div className="px-4 py-2.5 bg-white border-t border-light-border md:hidden relative">
+        <form onSubmit={handleSearchSubmit} className="w-full flex">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder={t('header.search')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-4 pr-10 py-2 rounded-l-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs rtl:pr-4 rtl:pl-10"
+            />
+            <Search className="absolute right-3.5 top-2.5 w-4 h-4 text-gray-400 pointer-events-none rtl:left-3.5 rtl:right-auto" />
+          </div>
+          <button
+            type="submit"
+            className="bg-primary hover:bg-primary-dark text-cream px-4 rounded-r-full font-semibold text-xs transition-colors duration-150 rtl:rounded-r-none rtl:rounded-l-full"
+          >
+            {locale === 'ar' ? 'بحث' : 'Search'}
+          </button>
+        </form>
+
+        {/* Mobile Suggestions Dropdown */}
+        {isSuggestOpen && suggestions.length > 0 && (
+          <div className="absolute left-4 right-4 top-full mt-1 bg-white border border-light-border rounded-xl shadow-lg overflow-hidden z-50">
+            <div className="divide-y divide-gray-100">
+              {suggestions.map((product) => (
+                <button
+                  key={product.id}
+                  onClick={() => {
+                    handleSuggestionClick(product.slug);
+                    setIsSuggestOpen(false);
+                  }}
+                  className="w-full px-4 py-2.5 text-left rtl:text-right hover:bg-cream/40 flex items-center justify-between text-xs transition-colors"
+                >
+                  <div>
+                    <span className="font-semibold text-dark block">
+                      {locale === 'ar' ? product.arabicName : product.name}
+                    </span>
+                    <span className="text-[10px] text-muted-text">{product.brand} • {product.weight}</span>
+                  </div>
+                  <span className="text-primary font-semibold text-[10px] bg-cream/70 px-2 py-0.5 rounded-md border border-light-border">
+                    ${product.purchaseOptions.single.price}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Sub navigation bar (Categories & Pages) */}
       <div className="bg-cream border-t border-light-border overflow-x-auto no-scrollbar">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-start sm:justify-between py-2 text-xs sm:text-sm font-semibold tracking-wide gap-6 whitespace-nowrap">
-          <div className="flex items-center gap-4 sm:gap-6">
-            <Link href="/shop" className="text-primary hover:text-gold transition-colors border-r border-gray-300 pr-4 rtl:border-r-0 rtl:border-l rtl:pr-0 rtl:pl-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between py-2 text-xs sm:text-sm font-semibold tracking-wide gap-6 whitespace-nowrap">
+          <div className="flex items-center gap-4 sm:gap-6 relative">
+            <Link href="/" className="text-dark hover:text-primary transition-colors">
+              {t('nav.home')}
+            </Link>
+            <Link href="/shop" className="text-dark hover:text-primary transition-colors">
               {t('nav.shop')}
             </Link>
             
-            {/* Category Links */}
-            <Link href="/category/egyptian" className="text-dark hover:text-primary transition-colors">
-              {t('cat.egyptian')}
+            {/* Categories Mega Menu Toggle */}
+            <div 
+              className="relative"
+              onMouseEnter={() => setIsMegaMenuOpen(true)}
+              onMouseLeave={() => setIsMegaMenuOpen(false)}
+            >
+              <button 
+                className="text-dark hover:text-primary transition-colors flex items-center gap-1 py-1 focus:outline-none"
+                onClick={() => setIsMegaMenuOpen(!isMegaMenuOpen)}
+                aria-expanded={isMegaMenuOpen}
+              >
+                <span>{t('nav.categories')}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+              </button>
+              
+              {/* Mega Menu Dropdown */}
+              {isMegaMenuOpen && (
+                <div 
+                  className="absolute top-full ltr:left-0 rtl:right-0 ltr:right-auto rtl:left-auto z-50 bg-white border border-light-border rounded-xl shadow-xl p-6 grid grid-cols-2 gap-4 text-xs sm:text-sm mt-1 fade-in"
+                  style={{ minWidth: '450px' }}
+                >
+                  <div className="col-span-2 border-b border-light-border pb-2 mb-1">
+                    <strong className="text-xs uppercase text-gold tracking-wider">
+                      {locale === 'ar' ? 'تسوق حسب الأقسام' : 'SHOP BY CATEGORY'}
+                    </strong>
+                  </div>
+                  {categories.map((cat) => (
+                    <Link
+                      key={cat.slug}
+                      href={`/category/${cat.slug}`}
+                      onClick={() => setIsMegaMenuOpen(false)}
+                      className="text-dark hover:text-primary transition-colors flex items-center gap-2.5 p-2 rounded-lg hover:bg-cream/35"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-gold/70" />
+                      <span>{locale === 'ar' ? cat.arabicName : cat.name}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <Link href="/shop?filter=deals" className="text-dark hover:text-primary transition-colors">
+              {t('nav.deals')}
             </Link>
-            <Link href="/category/levantine" className="text-dark hover:text-primary transition-colors">
-              {t('cat.levantine')}
+            <Link href="/shop?filter=bestseller" className="text-dark hover:text-primary transition-colors">
+              {t('nav.bestsellers')}
             </Link>
-            <Link href="/category/gulf" className="text-dark hover:text-primary transition-colors">
-              {t('cat.gulf')}
-            </Link>
-            <Link href="/category/maghreb" className="text-dark hover:text-primary transition-colors">
-              {t('cat.maghreb')}
-            </Link>
-            <Link href="/category/frozen" className="text-dark hover:text-primary transition-colors">
-              {t('cat.frozen')}
-            </Link>
-            <Link href="/category/sweets" className="text-dark hover:text-primary transition-colors">
-              {t('cat.sweets')}
-            </Link>
-            <Link href="/category/beverages" className="text-dark hover:text-primary transition-colors">
-              {t('cat.beverages')}
-            </Link>
-            <Link href="/category/spices" className="text-dark hover:text-primary transition-colors">
-              {t('cat.spices')}
-            </Link>
-            <Link href="/category/household" className="text-dark hover:text-primary transition-colors">
-              {t('cat.household')}
+            <Link href="/shop?sort=newest" className="text-dark hover:text-primary transition-colors">
+              {t('nav.newarrivals')}
             </Link>
           </div>
 

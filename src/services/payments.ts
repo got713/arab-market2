@@ -7,16 +7,20 @@ export interface PaymentDetails {
   nameOnCard: string;
 }
 
-export const PaymentService = {
-  processPayment: async (
-    amount: number,
-    details: PaymentDetails
-  ): Promise<{
-    success: boolean;
-    transactionId: string;
-    error?: string;
-  }> => {
-    await delay(1000); // Simulate transaction delay
+export interface PaymentResponse {
+  success: boolean;
+  transactionId: string;
+  error?: string;
+}
+
+export interface IPaymentService {
+  processPayment(amount: number, details: PaymentDetails): Promise<PaymentResponse>;
+}
+
+// 1. Mock Payment Service (Active Provider)
+export const MockPaymentService: IPaymentService = {
+  processPayment: async (amount: number, details: PaymentDetails): Promise<PaymentResponse> => {
+    await delay(1000); // Simulate transaction network delay
 
     // Basic Card Validation Simulation
     const cardNo = details.cardNumber.replace(/\s+/g, '');
@@ -53,10 +57,39 @@ export const PaymentService = {
       };
     }
 
-    // Success transaction simulation
+    // Success transaction simulation (no actual billing occurs)
     return {
       success: true,
-      transactionId: `TXN-${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+      transactionId: `TXN-MOCK-${Math.floor(1000000000 + Math.random() * 9000000000)}`,
     };
-  },
+  }
 };
+
+// 2. Stripe Payment Service Stub (Prepared for future production use)
+export const StripePaymentService: IPaymentService = {
+  processPayment: async (amount: number, details: PaymentDetails): Promise<PaymentResponse> => {
+    console.log(`[StripePaymentService] Processing payment of $${amount} via Stripe API.`);
+    // TODO: Integrate Stripe Web SDK and charge via secure API token
+    return {
+      success: false,
+      transactionId: '',
+      error: 'Stripe Payment Service is not yet configured.'
+    };
+  }
+};
+
+// 3. PayPal Payment Service Stub (Prepared for future production use)
+export const PayPalPaymentService: IPaymentService = {
+  processPayment: async (amount: number, details: PaymentDetails): Promise<PaymentResponse> => {
+    console.log(`[PayPalPaymentService] Processing payment of $${amount} via PayPal SDK.`);
+    // TODO: Redirect/Init PayPal checkout flows
+    return {
+      success: false,
+      transactionId: '',
+      error: 'PayPal Payment Service is not yet configured.'
+    };
+  }
+};
+
+// Main Export pointing to active service
+export const PaymentService = MockPaymentService;

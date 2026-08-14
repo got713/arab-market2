@@ -23,10 +23,13 @@ function ShopContent() {
 
   // Filters State
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedOrigins, setSelectedOrigins] = useState<string[]>([]);
+  const [priceRange, setPriceRange] = useState<string | null>(null);
   const [onlyHalal, setOnlyHalal] = useState(false);
   const [onlyInStock, setOnlyInStock] = useState(false);
   const [sortBy, setSortBy] = useState('relevance');
+  const [filterBy, setFilterBy] = useState<string | null>(null);
 
   // Load products on mount
   useEffect(() => {
@@ -53,6 +56,12 @@ function ShopContent() {
     if (sortParam) {
       setSortBy(sortParam);
     }
+    const filterParam = searchParams?.get('filter');
+    if (filterParam) {
+      setFilterBy(filterParam);
+    } else {
+      setFilterBy(null);
+    }
   }, [searchParams]);
 
   // Apply filters and sorting
@@ -64,16 +73,36 @@ function ShopContent() {
       result = result.filter((p) => selectedCategories.includes(p.category));
     }
 
-    // Filter by country
-    if (selectedCountries.length > 0) {
-      result = result.filter((p) => selectedCountries.includes(p.country));
+    // Filter by Brand
+    if (selectedBrands.length > 0) {
+      result = result.filter((p) => selectedBrands.includes(p.brand));
+    }
+
+    // Filter by Origin
+    if (selectedOrigins.length > 0) {
+      result = result.filter((p) => selectedOrigins.includes(p.country));
+    }
+
+    // Filter by Price Range
+    if (priceRange === 'under-5') {
+      result = result.filter((p) => p.purchaseOptions.single.price < 5);
+    } else if (priceRange === '5-to-15') {
+      result = result.filter((p) => p.purchaseOptions.single.price >= 5 && p.purchaseOptions.single.price <= 15);
+    } else if (priceRange === 'over-15') {
+      result = result.filter((p) => p.purchaseOptions.single.price > 15);
+    }
+
+    // Filter by Deals / Bestsellers from URL
+    if (filterBy === 'deals') {
+      result = result.filter((p) => p.featured);
+    } else if (filterBy === 'bestseller') {
+      result = result.filter((p) => p.bestSeller);
     }
 
     // Filter by Halal
     if (onlyHalal) {
-      // For the demo, assume spices, groceries, sweets, and frozen are Halal
       result = result.filter((p) => {
-        const halalCategories = ['spices', 'groceries', 'sweets', 'frozen', 'egyptian', 'levantine', 'gulf', 'maghreb'];
+        const halalCategories = ['spices', 'groceries', 'sweets-snacks', 'frozen', 'beverages', 'sauces-condiments', 'canned-jarred', 'grains-pasta', 'dairy-cheese', 'meat-poultry', 'fresh-bakery'];
         return halalCategories.includes(p.category) || p.ingredients.toLowerCase().includes('halal') || p.name.toLowerCase().includes('halal');
       });
     }
@@ -96,7 +125,7 @@ function ShopContent() {
     }
 
     setFilteredProducts(result);
-  }, [allProducts, selectedCategories, selectedCountries, onlyHalal, onlyInStock, sortBy]);
+  }, [allProducts, selectedCategories, selectedBrands, selectedOrigins, priceRange, filterBy, onlyHalal, onlyInStock, sortBy]);
 
   const toggleCategory = (cat: string) => {
     setSelectedCategories((prev) =>
@@ -104,22 +133,19 @@ function ShopContent() {
     );
   };
 
-  const toggleCountry = (country: string) => {
-    setSelectedCountries((prev) =>
-      prev.includes(country) ? prev.filter((c) => c !== country) : [...prev, country]
-    );
-  };
-
   const handleResetFilters = () => {
     setSelectedCategories([]);
-    setSelectedCountries([]);
+    setSelectedBrands([]);
+    setSelectedOrigins([]);
+    setPriceRange(null);
     setOnlyHalal(false);
     setOnlyInStock(false);
     setSortBy('relevance');
   };
 
-  // Distinct countries lists in seed data
-  const countriesList = ['Egypt', 'Lebanon', 'Palestine', 'Jordan', 'Syria', 'Saudi Arabia', 'Morocco'];
+  // Distinct list helper computations
+  const brandsList = Array.from(new Set(allProducts.map((p) => p.brand))).filter(Boolean).sort();
+  const originsList = Array.from(new Set(allProducts.map((p) => p.country))).filter(Boolean).sort();
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
@@ -171,29 +197,81 @@ function ShopContent() {
               ))}
             </div>
           </div>
-
-          {/* Country filter */}
-          <div>
+          {/* Price Filter */}
+          <div className="pt-4 border-t border-light-border">
             <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
-              {t('shop.filter.country')}
+              {locale === 'ar' ? 'السعر' : 'Price'}
             </h4>
-            <div className="space-y-2">
-              {countriesList.map((country) => (
-                <button
-                  key={country}
-                  onClick={() => toggleCountry(country)}
-                  className={`w-full flex items-center justify-between text-xs px-2.5 py-1.5 rounded-md text-left rtl:text-right transition-colors ${
-                    selectedCountries.includes(country)
-                      ? 'bg-cream text-primary font-bold'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  <span>{translateCountry(country, locale)}</span>
-                  {selectedCountries.includes(country) && <Check className="w-3.5 h-3.5 text-primary" />}
-                </button>
+            <div className="space-y-1.5 text-xs text-gray-600">
+              {(['all', 'under-5', '5-to-15', 'over-15'] as const).map((range) => (
+                <label key={range} className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="radio"
+                    name="price-range"
+                    checked={priceRange === (range === 'all' ? null : range)}
+                    onChange={() => setPriceRange(range === 'all' ? null : range)}
+                    className="text-primary focus:ring-primary/20 accent-primary"
+                  />
+                  <span>
+                    {range === 'all' && (locale === 'ar' ? 'الكل' : 'All Prices')}
+                    {range === 'under-5' && (locale === 'ar' ? 'أقل من $5' : 'Under $5')}
+                    {range === '5-to-15' && (locale === 'ar' ? '$5 إلى $15' : '$5 to $15')}
+                    {range === 'over-15' && (locale === 'ar' ? 'أكثر من $15' : 'Over $15')}
+                  </span>
+                </label>
               ))}
             </div>
           </div>
+
+          {/* Brand Filter */}
+          <div className="pt-4 border-t border-light-border">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
+              {locale === 'ar' ? 'العلامة التجارية' : 'Brand'}
+            </h4>
+            <div className="space-y-1.5 text-xs text-gray-600 max-h-40 overflow-y-auto pr-1">
+              {brandsList.map((brand) => (
+                <label key={brand} className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={selectedBrands.includes(brand)}
+                    onChange={() => {
+                      setSelectedBrands(prev => 
+                        prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]
+                      );
+                    }}
+                    className="rounded border-gray-300 text-primary focus:ring-primary/20 accent-primary"
+                  />
+                  <span>{brand}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Origin Filter */}
+          <div className="pt-4 border-t border-light-border">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
+              {locale === 'ar' ? 'بلد المنشأ' : 'Origin'}
+            </h4>
+            <div className="space-y-1.5 text-xs text-gray-600 max-h-40 overflow-y-auto pr-1">
+              {originsList.map((origin) => (
+                <label key={origin} className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={selectedOrigins.includes(origin)}
+                    onChange={() => {
+                      setSelectedOrigins(prev => 
+                        prev.includes(origin) ? prev.filter(o => o !== origin) : [...prev, origin]
+                      );
+                    }}
+                    className="rounded border-gray-300 text-primary focus:ring-primary/20 accent-primary"
+                  />
+                  <span>{translateCountry(origin, locale)}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+
 
           {/* Certification / Stock checklist */}
           <div className="pt-4 border-t border-light-border space-y-3">

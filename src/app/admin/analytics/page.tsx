@@ -9,11 +9,11 @@ export default function AdminAnalyticsPage() {
 
   // Mock performance metrics
   const categoriesPerformance = [
-    { name: locale === 'ar' ? 'الأكلات المصرية' : 'Egyptian Foods', percentage: 40, sales: '$19,568' },
-    { name: locale === 'ar' ? 'المأكولات الشامية' : 'Levantine Specialties', percentage: 32, sales: '$15,654' },
-    { name: locale === 'ar' ? 'الحلويات الشرقية' : 'Sweets & Desserts', percentage: 14, sales: '$6,848' },
+    { name: locale === 'ar' ? 'البقالة والأغذية الجافة' : 'Pantry & Groceries', percentage: 40, sales: '$19,568' },
+    { name: locale === 'ar' ? 'الأغذية المجمدة' : 'Frozen Foods', percentage: 32, sales: '$15,654' },
+    { name: locale === 'ar' ? 'الحلويات والتسالي' : 'Sweets & Snacks', percentage: 14, sales: '$6,848' },
     { name: locale === 'ar' ? 'البهارات والأعشاب' : 'Spices & Herbs', percentage: 8, sales: '$3,913' },
-    { name: locale === 'ar' ? 'المشروبات والشاي' : 'Beverages & Teas', percentage: 6, sales: '$2,937' },
+    { name: locale === 'ar' ? 'المشروبات والعصائر' : 'Beverages', percentage: 6, sales: '$2,937' },
   ];
 
   const countriesPerformance = [
