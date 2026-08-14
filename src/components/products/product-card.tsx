@@ -40,7 +40,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   return (
     <div className="group relative bg-white border border-light-border rounded-xl shadow-xs hover:shadow-md hover:border-gold/50 transition-all duration-300 flex flex-col overflow-hidden">
       
-      {/* Product Image & Badges */}
+      {/* Product Image & Wishlist Toggle */}
       <div className="relative aspect-square w-full bg-cream/30 overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -48,12 +48,6 @@ export default function ProductCard({ product }: ProductCardProps) {
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
-        
-        {/* Country Badge */}
-        <div className="absolute top-2 left-2 rtl:left-auto rtl:right-2 bg-white/95 border border-light-border px-2 py-0.5 rounded-md text-[10px] font-semibold text-dark flex items-center gap-1">
-          <span>{product.country === 'Egypt' ? '🇪🇬' : product.country === 'Palestine' ? '🇵🇸' : product.country === 'Lebanon' ? '🇱🇧' : product.country === 'Jordan' ? '🇯🇴' : product.country === 'Syria' ? '🇸🇾' : product.country === 'Saudi Arabia' ? '🇸🇦' : product.country === 'Morocco' ? '🇲🇦' : '🌍'}</span>
-          <span>{translateCountry(product.country, locale)}</span>
-        </div>
 
         {/* Wishlist Button */}
         <button
@@ -101,7 +95,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
 
           {/* Sizing/Quantity label */}
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-xs text-gray-500 mt-2">
             {product.weight} {selectedOption !== 'single' && `(${t('prod.' + selectedOption)} x${currentOption.quantity})`}
           </div>
 
@@ -127,7 +121,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Pricing & Add to Cart button */}
         <div className="mt-4 pt-3 border-t border-light-border flex items-center justify-between gap-2">
           <div className="flex flex-col">
-            <span className="text-lg font-bold text-primary">
+            <span className="text-base sm:text-lg font-bold text-primary">
               {formatPrice(price, locale)}
             </span>
             {selectedOption !== 'single' && (
@@ -140,7 +134,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           <button
             onClick={handleAddToCart}
             disabled={product.stock <= 0}
-            className={`px-3.5 py-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+            className={`px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors ${
               product.stock <= 0
                 ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
                 : isAdded
@@ -151,7 +145,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             {isAdded ? (
               <>
                 <Check className="w-3.5 h-3.5" />
-                <span>{locale === 'ar' ? 'تمت الإضافة' : 'Added'}</span>
+                <span>{locale === 'ar' ? 'تمت' : 'Added'}</span>
               </>
             ) : product.stock <= 0 ? (
               <span>{t('prod.out_of_stock')}</span>

@@ -38,18 +38,12 @@ export const translations: TranslationDictionary = {
   'hero.cta_categories': { en: 'Explore Categories', ar: 'تصفح الأقسام' },
 
   // Categories
-  'cat.groceries': { en: 'Pantry & Groceries', ar: 'البقالة والأغذية الجافة' },
-  'cat.frozen': { en: 'Frozen Foods', ar: 'الأغذية المجمدة' },
-  'cat.fresh-bakery': { en: 'Fresh & Bakery', ar: 'المخبوزات والمنتجات الطازجة' },
-  'cat.dairy-cheese': { en: 'Dairy & Cheese', ar: 'الألبان والأجبان' },
-  'cat.meat-poultry': { en: 'Meat & Poultry', ar: 'اللحوم والدواجن' },
-  'cat.beverages': { en: 'Beverages', ar: 'المشروبات والعصائر' },
+  'cat.groceries': { en: 'Groceries', ar: 'البقالة' },
+  'cat.frozen': { en: 'Frozen', ar: 'المجمدات' },
+  'cat.drinks': { en: 'Drinks', ar: 'المشروبات' },
   'cat.sweets-snacks': { en: 'Sweets & Snacks', ar: 'الحلويات والتسالي' },
-  'cat.spices': { en: 'Spices & Herbs', ar: 'البهارات والأعشاب' },
-  'cat.sauces-condiments': { en: 'Sauces & Condiments', ar: 'الصلصات والمقبلات' },
-  'cat.canned-jarred': { en: 'Canned & Jarred Foods', ar: 'المعلبات والأغذية المحفوظة' },
-  'cat.grains-pasta': { en: 'Rice, Grains & Pasta', ar: 'الأرز، الحبوب والمكرونة' },
-  'cat.household': { en: 'Household Essentials', ar: 'المستلزمات المنزلية' },
+  'cat.spices-sauces': { en: 'Spices & Sauces', ar: 'التوابل والصلصات' },
+  'cat.household': { en: 'Household', ar: 'مستلزمات المنزل' },
 
   // Filters & Sorting
   'shop.filters': { en: 'Filters', ar: 'الفلاتر' },

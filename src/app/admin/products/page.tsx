@@ -23,6 +23,7 @@ export default function AdminProductsPage() {
   const [slug, setSlug] = useState('');
   const [brand, setBrand] = useState('');
   const [category, setCategory] = useState('groceries');
+  const [subcategory, setSubcategory] = useState('');
   const [country, setCountry] = useState('Egypt');
   const [description, setDescription] = useState('');
   const [arabicDescription, setArabicDescription] = useState('');
@@ -75,6 +76,7 @@ export default function AdminProductsPage() {
     setStock(100);
     setFeatured(false);
     setBestSeller(false);
+    setSubcategory('');
     setSinglePrice(4.99);
     setPackPrice(26.99);
     setPackQty(6);
@@ -100,6 +102,7 @@ export default function AdminProductsPage() {
     setStock(prod.stock);
     setFeatured(prod.featured);
     setBestSeller(prod.bestSeller);
+    setSubcategory(prod.subcategoryId || '');
     
     // Set pricing options
     setSinglePrice(prod.purchaseOptions.single.price);
@@ -147,7 +150,10 @@ export default function AdminProductsPage() {
       slug: slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       brand,
       category,
+      categoryId: category,
+      subcategoryId: subcategory || undefined,
       country,
+      origin: country,
       description,
       arabicDescription,
       images: [imageUrl],
@@ -157,7 +163,11 @@ export default function AdminProductsPage() {
       ingredients,
       allergens,
       purchaseOptions,
+      price: Number(singlePrice),
+      packPrice: Number(packPrice),
+      casePrice: Number(casePrice),
       stock: Number(stock),
+      inventory: Number(stock),
       featured,
       bestSeller,
       active: editingProduct ? editingProduct.active : true
@@ -337,8 +347,8 @@ export default function AdminProductsPage() {
                 </div>
               </div>
 
-              {/* Brand, Category, Origin */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Brand, Category, Subcategory, Origin */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Brand *</label>
                   <input
@@ -353,7 +363,10 @@ export default function AdminProductsPage() {
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Category *</label>
                   <select
                     value={category}
-                    onChange={(e) => setCategory(e.target.value)}
+                    onChange={(e) => {
+                      setCategory(e.target.value);
+                      setSubcategory('');
+                    }}
                     className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300"
                   >
                     {categories.map((cat) => (
@@ -364,7 +377,22 @@ export default function AdminProductsPage() {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Country of Origin *</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Subcategory</label>
+                  <select
+                    value={subcategory}
+                    onChange={(e) => setSubcategory(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 bg-white"
+                  >
+                    <option value="">None</option>
+                    {(categories.find((cat) => cat.slug === category)?.subcategories || []).map((sub) => (
+                      <option key={sub.slug} value={sub.slug}>
+                        {sub.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">Origin *</label>
                   <input
                     type="text"
                     required

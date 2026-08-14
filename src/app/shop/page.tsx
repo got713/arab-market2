@@ -102,7 +102,7 @@ function ShopContent() {
     // Filter by Halal
     if (onlyHalal) {
       result = result.filter((p) => {
-        const halalCategories = ['spices', 'groceries', 'sweets-snacks', 'frozen', 'beverages', 'sauces-condiments', 'canned-jarred', 'grains-pasta', 'dairy-cheese', 'meat-poultry', 'fresh-bakery'];
+        const halalCategories = ['groceries', 'frozen', 'drinks', 'sweets-snacks', 'spices-sauces', 'household'];
         return halalCategories.includes(p.category) || p.ingredients.toLowerCase().includes('halal') || p.name.toLowerCase().includes('halal');
       });
     }

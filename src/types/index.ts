@@ -22,8 +22,11 @@ export interface Product {
   slug: string;
   arabicName: string;
   brand: string;
-  category: string;
-  country: string;
+  category: string; // Keep for backward compatibility
+  categoryId?: string;
+  subcategoryId?: string;
+  country: string; // Keep for backward compatibility
+  origin?: string;
   description: string;
   arabicDescription: string;
   images: string[];
@@ -33,10 +36,34 @@ export interface Product {
   ingredients: string;
   allergens: string;
   purchaseOptions: PurchaseOptions;
-  stock: number;
+  price?: number; // Single price helper
+  packPrice?: number; // Pack price helper
+  casePrice?: number; // Case price helper
+  stock: number; // Keep for backward compatibility
+  inventory?: number; // Alias for stock
   featured: boolean;
   bestSeller: boolean;
+  newArrival?: boolean;
+  tags?: string[];
   active: boolean; // For admin enablement/disablement
+}
+
+export interface Subcategory {
+  slug: string;
+  name: string;
+  arabicName: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  arabicName: string;
+  slug: string;
+  description: string;
+  arabicDescription?: string;
+  image: string;
+  icon: string;
+  subcategories: Subcategory[];
 }
 
 export interface CartItem {

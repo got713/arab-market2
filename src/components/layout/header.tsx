@@ -362,46 +362,49 @@ export default function Header() {
             <Link href="/" className="text-dark hover:text-primary transition-colors">
               {t('nav.home')}
             </Link>
-            <Link href="/shop" className="text-dark hover:text-primary transition-colors">
-              {t('nav.shop')}
-            </Link>
-            
-            {/* Categories Mega Menu Toggle */}
+            {/* Shop with Mega Menu Toggle */}
             <div 
               className="relative"
               onMouseEnter={() => setIsMegaMenuOpen(true)}
               onMouseLeave={() => setIsMegaMenuOpen(false)}
             >
-              <button 
+              <Link 
+                href="/shop" 
                 className="text-dark hover:text-primary transition-colors flex items-center gap-1 py-1 focus:outline-none"
-                onClick={() => setIsMegaMenuOpen(!isMegaMenuOpen)}
-                aria-expanded={isMegaMenuOpen}
+                onClick={() => setIsMegaMenuOpen(false)}
               >
-                <span>{t('nav.categories')}</span>
+                <span>{t('nav.shop')}</span>
                 <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-              </button>
+              </Link>
               
               {/* Mega Menu Dropdown */}
               {isMegaMenuOpen && (
                 <div 
-                  className="absolute top-full ltr:left-0 rtl:right-0 ltr:right-auto rtl:left-auto z-50 bg-white border border-light-border rounded-xl shadow-xl p-6 grid grid-cols-2 gap-4 text-xs sm:text-sm mt-1 fade-in"
-                  style={{ minWidth: '450px' }}
+                  className="absolute top-full ltr:left-0 rtl:right-0 ltr:right-auto rtl:left-auto z-50 bg-white border border-light-border rounded-xl shadow-xl p-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 text-xs sm:text-sm mt-1 fade-in"
+                  style={{ minWidth: '780px' }}
                 >
-                  <div className="col-span-2 border-b border-light-border pb-2 mb-1">
-                    <strong className="text-xs uppercase text-gold tracking-wider">
-                      {locale === 'ar' ? 'تسوق حسب الأقسام' : 'SHOP BY CATEGORY'}
-                    </strong>
-                  </div>
                   {categories.map((cat) => (
-                    <Link
-                      key={cat.slug}
-                      href={`/category/${cat.slug}`}
-                      onClick={() => setIsMegaMenuOpen(false)}
-                      className="text-dark hover:text-primary transition-colors flex items-center gap-2.5 p-2 rounded-lg hover:bg-cream/35"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-gold/70" />
-                      <span>{locale === 'ar' ? cat.arabicName : cat.name}</span>
-                    </Link>
+                    <div key={cat.slug} className="space-y-2.5 whitespace-normal" style={{ minWidth: '110px' }}>
+                      <Link
+                        href={`/category/${cat.slug}`}
+                        onClick={() => setIsMegaMenuOpen(false)}
+                        className="font-bold text-primary hover:text-gold transition-colors block border-b border-light-border pb-1 text-xs"
+                      >
+                        {locale === 'ar' ? cat.arabicName : cat.name}
+                      </Link>
+                      <div className="flex flex-col gap-1 text-[10px] sm:text-[11px] text-gray-500 font-medium">
+                        {cat.subcategories.map((sub) => (
+                          <Link
+                            key={sub.slug}
+                            href={`/shop?category=${cat.slug}`}
+                            onClick={() => setIsMegaMenuOpen(false)}
+                            className="hover:text-primary transition-colors py-0.5"
+                          >
+                            {locale === 'ar' ? sub.arabicName : sub.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}

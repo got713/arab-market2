@@ -60,7 +60,7 @@ export default function CategoryPage() {
   return (
     <div className="fade-in">
       {/* Category Banner */}
-      <section className="relative bg-primary overflow-hidden py-16 text-cream">
+      <section className="relative bg-primary overflow-hidden py-12 text-cream">
         <div className="absolute inset-0 bg-gradient-to-r from-primary-dark/95 to-primary/70 z-10" />
         {categoryInfo && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -82,14 +82,34 @@ export default function CategoryPage() {
             </span>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl font-bold">
+          <h1 className="text-2xl sm:text-3xl font-bold">
             {categoryInfo ? (locale === 'ar' ? categoryInfo.arabicName : categoryInfo.name) : ''}
           </h1>
-          <p className="text-sm text-cream/80 max-w-xl leading-relaxed">
+          <p className="text-xs sm:text-sm text-cream/80 max-w-xl leading-relaxed">
             {categoryInfo ? (locale === 'ar' ? categoryInfo.arabicDescription : categoryInfo.description) : ''}
           </p>
         </div>
       </section>
+
+      {/* Subcategory Navigation */}
+      {categoryInfo && categoryInfo.subcategories && categoryInfo.subcategories.length > 0 && (
+        <div className="bg-cream/30 border-b border-light-border py-3">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center gap-2.5 text-xs font-semibold text-gray-500">
+            <span className="uppercase text-[10px] font-bold text-gray-400 tracking-wider">
+              {locale === 'ar' ? 'الأقسام الفرعية:' : 'Subcategories:'}
+            </span>
+            {categoryInfo.subcategories.map((sub) => (
+              <Link
+                key={sub.slug}
+                href={`/shop?category=${categoryInfo.slug}`}
+                className="px-3.5 py-1.5 rounded-full border border-gray-300 hover:border-primary hover:text-primary transition-all text-xs bg-white"
+              >
+                {locale === 'ar' ? sub.arabicName : sub.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Product List */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -100,10 +120,37 @@ export default function CategoryPage() {
             ))}
           </div>
         ) : products.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+          <div className="space-y-12">
+            {/* Featured Products */}
+            {products.filter((p) => p.featured).length > 0 && (
+              <div className="space-y-4">
+                <h2 className="text-base sm:text-lg font-bold text-dark flex items-center gap-2">
+                  <span className="w-1 h-5 rounded-full bg-gold" />
+                  <span>{locale === 'ar' ? 'المنتجات المميزة' : 'Featured Products'}</span>
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6">
+                  {products
+                    .filter((p) => p.featured)
+                    .slice(0, 4)
+                    .map((product) => (
+                      <ProductCard key={product.id} product={product} />
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* All Products */}
+            <div className="space-y-4">
+              <h2 className="text-base sm:text-lg font-bold text-dark flex items-center gap-2">
+                <span className="w-1 h-5 rounded-full bg-primary" />
+                <span>{locale === 'ar' ? 'كل المنتجات' : 'All Products'}</span>
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6">
+                {products.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
           <div className="text-center py-16 bg-cream/10 border border-dashed border-light-border rounded-2xl max-w-md mx-auto">
