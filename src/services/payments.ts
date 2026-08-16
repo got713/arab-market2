@@ -1,56 +1,59 @@
+import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { ApiClient } from '../lib/api-client';
 
-export interface PaymentDetails {
-  cardNumber: string;
-  expiry: string;
-  cvc: string;
-  nameOnCard: string;
-}
+// Real Stripe integration. The old version of this file simulated success and
+// called the webhook endpoint directly from the browser — that never touched
+// Stripe at all. Real payments now flow as:
+//   1. Order is created server-side (OrderService.createOrder) with payment_status
+//      'pending' and stock already reserved.
+//   2. PaymentService.createIntent() asks the backend for a real Stripe
+//      PaymentIntent tied to that order (backend/OrderController::createPaymentIntent).
+//   3. The frontend mounts Stripe's own <PaymentElement/> using the returned
+//      client_secret and calls stripe.confirmPayment() — card details never touch
+//      our own state/servers, Stripe handles that (this is also what makes it PCI
+//      compliant, unlike the old raw <input> fields).
+//   4. Stripe calls our webhook (signature-verified) to confirm success/failure and
+//      flip the order to paid/confirmed.
 
-export interface PaymentResponse {
-  success: boolean;
-  transactionId: string;
-  error?: string;
+let stripePromise: Promise<Stripe | null> | null = null;
+let stripePromiseKey: string | null = null;
+
+/**
+ * Returns a cached Stripe.js instance for the given publishable key. The key
+ * comes from the backend (config/services.php -> STRIPE_KEY) rather than being
+ * hardcoded on the frontend, so switching Stripe accounts only requires an env
+ * change on the backend.
+ */
+export const getStripe = (publishableKey: string): Promise<Stripe | null> => {
+  if (!publishableKey) {
+    return Promise.resolve(null);
+  }
+  if (!stripePromise || stripePromiseKey !== publishableKey) {
+    stripePromiseKey = publishableKey;
+    stripePromise = loadStripe(publishableKey);
+  }
+  return stripePromise;
+};
+
+export interface PaymentIntentResponse {
+  client_secret: string;
+  publishable_key: string;
+  amount: number;
+  order_number: string;
 }
 
 export const PaymentService = {
-  processPayment: async (amount: number, details: PaymentDetails, orderNumber?: string, locale: 'en' | 'ar' = 'en'): Promise<PaymentResponse> => {
-    try {
-      // 1. If we have an order number, create Stripe Payment Intent in Laravel backend
-      if (orderNumber) {
-        const intent = await ApiClient.post<any>('/payments/stripe/intent', { 
-          order_number: orderNumber 
-        }, undefined, locale);
-
-        // 2. Simulate client-side success (matching Stripe Element confirmPayment)
-        // 3. Inform backend via mock webhook call to mark order as confirmed/paid
-        await ApiClient.post<any>('/payments/stripe/webhook', {
-          order_number: orderNumber,
-          status: 'succeeded',
-          transaction_id: intent.client_secret || 'tx_mock_123'
-        }, undefined, locale);
-
-        return {
-          success: true,
-          transactionId: intent.transaction_id || 'tx_mock_123'
-        };
-      }
-
-      // Fallback local validation
-      if (details.cardNumber.replace(/\s+/g, '').length < 15) {
-        return { success: false, transactionId: '', error: 'Invalid card number' };
-      }
-
-      return {
-        success: true,
-        transactionId: `TXN-MOCK-${Math.floor(10000000 + Math.random() * 90000000)}`
-      };
-    } catch (err: any) {
-      return {
-        success: false,
-        transactionId: '',
-        error: err.message || 'Payment processing failed.'
-      };
-    }
-  }
+  /**
+   * Creates (or re-fetches) a real Stripe PaymentIntent for an order that
+   * already exists in the database. Throws if the backend isn't configured
+   * with real Stripe keys yet (see backend/.env STRIPE_SECRET).
+   */
+  createIntent: async (orderNumber: string, locale: 'en' | 'ar' = 'en'): Promise<PaymentIntentResponse> => {
+    return ApiClient.post<PaymentIntentResponse>(
+      '/payments/stripe/intent',
+      { order_number: orderNumber },
+      undefined,
+      locale
+    );
+  },
 };

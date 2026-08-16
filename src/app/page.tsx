@@ -262,38 +262,16 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. BEST SELLERS */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="flex items-end justify-between mb-8 border-b border-light-border/60 pb-4">
-          <div className="space-y-1">
-            <h2 className="text-xl sm:text-2xl font-black text-primary uppercase tracking-wide font-cairo">
-              {isAr ? 'الأكثر مبيعاً' : 'Best Sellers'}
-            </h2>
-            <p className="text-xs text-muted-text font-medium">
-              {isAr ? 'المنتجات الأكثر مبيعاً وتقييماً من قبل عائلاتنا' : 'Top selling products loved by our community'}
-            </p>
-          </div>
-          <Link href="/shop?filter=bestseller" className="text-xs font-bold text-primary hover:text-gold flex items-center gap-0.5">
-            <span>{isAr ? 'عرض الكل' : 'View All'}</span>
-            <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
-          </Link>
-        </div>
-
-        {loading ? <Skeleton /> : bestSellers.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5">
-            {bestSellers.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-center text-muted-text py-10 font-cairo">{t('shop.no_products')}</p>
-        )}
-      </section>
-
-      {/* 6. EGYPTIAN FAVORITES */}
+      {/* 5. EGYPTIAN FAVORITES — moved ahead of Best Sellers to match the
+          recommended homepage hierarchy (Category -> Need -> Egyptian
+          Favorites -> Best Sellers -> Weekly Specials -> Fast US Delivery ->
+          Why Shop -> Reviews). This is presented as a curated collection, not
+          a country-based storefront section — matches the business
+          requirement that the site read as a modern American supermarket
+          with Egyptian products as a strong curated collection. */}
       <section id="egyptian-favorites" className="bg-[#FAF7F0] border-y border-light-border/60 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
+
           <div className="flex items-end justify-between mb-8 border-b border-light-border/60 pb-4">
             <div className="space-y-1">
               <h2 className="text-xl sm:text-2xl font-black text-primary font-cairo flex items-center gap-1.5">
@@ -321,27 +299,43 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 7. HOMEPAGE PROMOTIONAL SECTIONS (3 Banners) */}
+      {/* 6. BEST SELLERS */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Banner 1: Egyptian Favorites */}
-          <div className="bg-white border border-light-border rounded-2xl p-6 flex flex-col justify-between shadow-xs h-64 relative overflow-hidden group">
-            <div className="absolute inset-0 opacity-[0.03] bg-primary rounded-2xl" />
-            <div className="space-y-3 z-10 relative">
-              <span className="text-[10px] font-bold text-gold uppercase tracking-wider">Curated Collection</span>
-              <h3 className="text-lg font-bold text-primary font-cairo">{isAr ? 'المفضلة المصرية' : 'Egyptian Favorites'}</h3>
-              <p className="text-xs text-muted-text font-medium max-w-[200px]">
-                {isAr ? 'المنتجات المصرية الأكثر شعبية في مكان واحد.' : 'Popular Egyptian products in one place.'}
-              </p>
-            </div>
-            <div className="z-10 relative pt-4">
-              <Link href="/shop?tag=Egyptian" className="px-4 py-2.5 bg-primary hover:bg-primary-light text-white text-xs font-bold rounded-lg transition-colors inline-block">
-                {isAr ? 'تسوق المنتجات المصرية' : 'Shop Egyptian Favorites'}
-              </Link>
-            </div>
+        <div className="flex items-end justify-between mb-8 border-b border-light-border/60 pb-4">
+          <div className="space-y-1">
+            <h2 className="text-xl sm:text-2xl font-black text-primary uppercase tracking-wide font-cairo">
+              {isAr ? 'الأكثر مبيعاً' : 'Best Sellers'}
+            </h2>
+            <p className="text-xs text-muted-text font-medium">
+              {isAr ? 'المنتجات الأكثر مبيعاً وتقييماً من قبل عائلاتنا' : 'Top selling products loved by our community'}
+            </p>
           </div>
+          <Link href="/shop?filter=bestseller" className="text-xs font-bold text-primary hover:text-gold flex items-center gap-0.5">
+            <span>{isAr ? 'عرض الكل' : 'View All'}</span>
+            <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
+          </Link>
+        </div>
 
-          {/* Banner 2: Weekly Specials */}
+        {loading ? <Skeleton /> : bestSellers.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5">
+            {bestSellers.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-muted-text py-10 font-cairo">{t('shop.no_products')}</p>
+        )}
+      </section>
+
+      {/* 7. WEEKLY SPECIALS & FAST US DELIVERY — was previously a 3-banner
+          block that repeated an "Egyptian Favorites" banner redundant with
+          section 5 above; that duplicate banner has been removed so this
+          section maps 1:1 onto "Weekly Specials" + "Fast US Delivery" from
+          the recommended homepage hierarchy instead of restating Egyptian
+          Favorites a second time. */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Banner 1: Weekly Specials */}
           <div className="bg-white border border-light-border rounded-2xl p-6 flex flex-col justify-between shadow-xs h-64 relative overflow-hidden group">
             <div className="absolute inset-0 opacity-[0.03] bg-accent rounded-2xl" />
             <div className="space-y-3 z-10 relative">
@@ -358,7 +352,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Banner 3: Fast US Delivery */}
+          {/* Banner 2: Fast US Delivery */}
           <div className="bg-white border border-light-border rounded-2xl p-6 flex flex-col justify-between shadow-xs h-64 relative overflow-hidden group">
             <div className="absolute inset-0 opacity-[0.03] bg-gold rounded-2xl" />
             <div className="space-y-3 z-10 relative">

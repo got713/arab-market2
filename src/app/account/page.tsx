@@ -26,7 +26,7 @@ import {
 export default function AccountPage() {
   const router = useRouter();
   const { t, locale } = useLocaleStore();
-  const { user, isAuthenticated, loginCustomer, loginAdmin, logout, updateProfile } = useAuthStore();
+  const { user, isAuthenticated, loginCustomer, loginAdmin, loginWithCredentials, logout, updateProfile } = useAuthStore();
   const addToCart = useCartStore((state) => state.addToCart);
 
   // Form states
@@ -82,22 +82,26 @@ export default function AccountPage() {
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
-    if (!emailInput) {
-      setLoginError('Email is required.');
+    if (!emailInput || !passwordInput) {
+      setLoginError(locale === 'ar' ? 'البريد الإلكتروني وكلمة المرور مطلوبان.' : 'Email and password are required.');
       return;
     }
 
     try {
-      if (emailInput.toLowerCase() === 'admin@arabmarket.com') {
-        await loginAdmin();
-        await syncCartWithServer();
+      // Previously this always called loginCustomer/loginAdmin, which sign in
+      // with hardcoded demo passwords ('customer123'/'admin123') and silently
+      // ignored whatever the user typed into the password field. Now the actual
+      // password field value is sent to the backend, like a real login form.
+      await loginWithCredentials(emailInput, passwordInput);
+      await syncCartWithServer();
+
+      // Read fresh state right after the login promise resolves rather than the
+      // possibly-stale `isAdmin` captured when this component last rendered.
+      if (useAuthStore.getState().isAdmin) {
         router.push('/admin');
-      } else {
-        await loginCustomer(emailInput);
-        await syncCartWithServer();
       }
     } catch (err: any) {
-      setLoginError(err.message || 'Login failed. Please check credentials.');
+      setLoginError(err.message || (locale === 'ar' ? 'فشل تسجيل الدخول، برجاء التحقق من البيانات.' : 'Login failed. Please check credentials.'));
     }
   };
 
