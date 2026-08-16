@@ -238,7 +238,7 @@ export default function AdminOrdersPage() {
                           {locale === 'ar' ? item.product.arabicName : item.product.name}
                         </strong>
                         <span className="text-[10px] text-gray-400 uppercase">
-                          {item.quantity} x {locale === 'ar' ? (item.option === 'single' ? 'حبة' : item.option === 'pack' ? 'رابطة' : 'صندوق') : item.option} ({item.product.weight})
+                          {item.quantity} x {locale === 'ar' ? (item.option === 'single' ? 'قطعة' : item.option === 'pack' ? 'رابطة' : 'صندوق') : item.option} ({item.product.weight})
                         </span>
                       </div>
                       <span className="font-bold text-primary">

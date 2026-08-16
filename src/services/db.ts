@@ -1,7 +1,8 @@
-import { Product, Order, Customer, Coupon } from '../types';
+import { Product, Order, Customer, Coupon, Category } from '../types';
 import { products as initialProducts, mockCoupons as initialCoupons } from '../data/products';
 import { seedOrders as initialOrders } from '../data/orders';
 import { seedCustomers as initialCustomers } from '../data/customers';
+import { categories as staticCategories } from '../data/categories';
 
 // Safe check for browser environment
 const isClient = typeof window !== 'undefined';
@@ -11,6 +12,7 @@ const KEYS = {
   ORDERS: 'arab_market_orders',
   CUSTOMERS: 'arab_market_customers',
   COUPONS: 'arab_market_coupons',
+  CATEGORIES: 'arab_market_categories',
 };
 
 export const db = {
@@ -29,13 +31,36 @@ export const db = {
     if (!localStorage.getItem(KEYS.COUPONS)) {
       localStorage.setItem(KEYS.COUPONS, JSON.stringify(initialCoupons));
     }
+    if (!localStorage.getItem(KEYS.CATEGORIES)) {
+      const seeded = staticCategories.map((c, cIdx) => ({
+        ...c,
+        active: true,
+        featured: true,
+        displayOrder: cIdx * 10,
+        subcategories: (c.subcategories || []).map((s, sIdx) => ({
+          ...s,
+          active: true,
+          displayOrder: sIdx * 10,
+        })),
+      }));
+      localStorage.setItem(KEYS.CATEGORIES, JSON.stringify(seeded));
+    }
   },
 
   getProducts: (): Product[] => {
     if (!isClient) return initialProducts;
     db.init();
     const data = localStorage.getItem(KEYS.PRODUCTS);
-    return data ? JSON.parse(data) : initialProducts;
+    const products: Product[] = data ? JSON.parse(data) : initialProducts;
+    // Migration: backfill enabled:true on purchaseOptions that don't have it yet
+    return products.map((p) => ({
+      ...p,
+      purchaseOptions: {
+        single: { ...p.purchaseOptions.single, enabled: p.purchaseOptions.single.enabled ?? true  },
+        pack:   { ...p.purchaseOptions.pack,   enabled: p.purchaseOptions.pack.enabled   ?? true  },
+        case:   { ...p.purchaseOptions.case,   enabled: p.purchaseOptions.case.enabled   ?? true  },
+      },
+    }));
   },
 
   saveProducts: (products: Product[]) => {
@@ -77,5 +102,34 @@ export const db = {
   saveCoupons: (coupons: Coupon[]) => {
     if (!isClient) return;
     localStorage.setItem(KEYS.COUPONS, JSON.stringify(coupons));
+  },
+
+  getCategories: (): Category[] => {
+    if (!isClient) {
+      return staticCategories.map((c, cIdx) => ({
+        ...c,
+        active: true,
+        featured: true,
+        displayOrder: cIdx * 10,
+        subcategories: (c.subcategories || []).map((s, sIdx) => ({
+          ...s,
+          active: true,
+          displayOrder: sIdx * 10,
+        })),
+      }));
+    }
+    db.init();
+    const data = localStorage.getItem(KEYS.CATEGORIES);
+    if (!data) return [];
+    try {
+      return JSON.parse(data);
+    } catch {
+      return [];
+    }
+  },
+
+  saveCategories: (categories: Category[]) => {
+    if (!isClient) return;
+    localStorage.setItem(KEYS.CATEGORIES, JSON.stringify(categories));
   }
 };

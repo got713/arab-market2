@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Product } from '@/types';
+import { Product, Category } from '@/types';
 import { ProductService } from '@/services/products';
-import { categories } from '@/data/categories';
+import { CategoryService } from '@/services/categories';
 import { useLocaleStore } from '@/store/locale-store';
 import ProductCard from '@/components/products/product-card';
-import { SlidersHorizontal, ArrowUpDown, RefreshCw, Check } from 'lucide-react';
+import { SlidersHorizontal, ArrowUpDown, RefreshCw, Check, LayoutGrid, List } from 'lucide-react';
 import { translateCountry } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -15,6 +16,7 @@ export const dynamic = 'force-dynamic';
 function ShopContent() {
   const { t, locale } = useLocaleStore();
   const searchParams = useSearchParams();
+  const isAr = locale === 'ar';
   
   // State for products
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -30,13 +32,21 @@ function ShopContent() {
   const [onlyInStock, setOnlyInStock] = useState(false);
   const [sortBy, setSortBy] = useState('relevance');
   const [filterBy, setFilterBy] = useState<string | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  // Load products on mount
+  const [categoriesList, setCategoriesList] = useState<Category[]>([]);
+
+  // Load products & categories on mount
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const list = await ProductService.getProducts(true);
-        setAllProducts(list);
+        const [prodsList, catsList] = await Promise.all([
+          ProductService.getProducts(true),
+          CategoryService.getCategories(false), // only active
+        ]);
+        setAllProducts(prodsList);
+        setCategoriesList(catsList);
       } catch (err) {
         console.error(err);
       } finally {
@@ -62,6 +72,13 @@ function ShopContent() {
     } else {
       setFilterBy(null);
     }
+
+    const tagParam = searchParams?.get('tag');
+    if (tagParam) {
+      setSelectedTag(tagParam);
+    } else {
+      setSelectedTag(null);
+    }
   }, [searchParams]);
 
   // Apply filters and sorting
@@ -71,6 +88,16 @@ function ShopContent() {
     // Filter by category
     if (selectedCategories.length > 0) {
       result = result.filter((p) => selectedCategories.includes(p.category));
+    }
+
+    // Filter by tag
+    if (selectedTag) {
+      result = result.filter(
+        (p) =>
+          (p.tags && p.tags.includes(selectedTag)) ||
+          p.name.toLowerCase().includes(selectedTag) ||
+          p.description.toLowerCase().includes(selectedTag)
+      );
     }
 
     // Filter by Brand
@@ -120,16 +147,15 @@ function ShopContent() {
     } else if (sortBy === 'rating') {
       result.sort((a, b) => b.rating - a.rating);
     } else if (sortBy === 'newest') {
-      // Seed IDs sorted as default
       result.sort((a, b) => b.id.localeCompare(a.id));
     }
 
     setFilteredProducts(result);
-  }, [allProducts, selectedCategories, selectedBrands, selectedOrigins, priceRange, filterBy, onlyHalal, onlyInStock, sortBy]);
+  }, [allProducts, selectedCategories, selectedBrands, selectedOrigins, priceRange, filterBy, onlyHalal, onlyInStock, sortBy, selectedTag]);
 
   const toggleCategory = (cat: string) => {
     setSelectedCategories((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [cat] // single-select filter mimicking screenshot layout category path
     );
   };
 
@@ -145,15 +171,42 @@ function ShopContent() {
 
   // Distinct list helper computations
   const brandsList = Array.from(new Set(allProducts.map((p) => p.brand))).filter(Boolean).sort();
-  const originsList = Array.from(new Set(allProducts.map((p) => p.country))).filter(Boolean).sort();
+  
+  // Category products counts calculator
+  const getCategoryCount = (slug: string) => {
+    return allProducts.filter((p) => p.category === slug).length;
+  };
+
+  // Brand products counts calculator
+  const getBrandCount = (br: string) => {
+    return allProducts.filter((p) => p.brand === br).length;
+  };
+
+  const currentCategoryName = selectedCategories.length > 0 
+    ? categoriesList.find((c) => c.slug === selectedCategories[0])
+      ? isAr 
+        ? categoriesList.find((c) => c.slug === selectedCategories[0])?.arabicName 
+        : categoriesList.find((c) => c.slug === selectedCategories[0])?.name
+      : (isAr ? 'الأقسام' : 'Groceries')
+    : (isAr ? 'البقالة العامة' : 'Groceries');
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in text-dark" dir={isAr ? 'rtl' : 'ltr'}>
+      
+      {/* Breadcrumbs */}
+      <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">
+        <Link href="/" className="hover:text-primary transition-colors">{isAr ? 'الرئيسية' : 'Home'}</Link>
+        <span className="mx-2 font-light">/</span>
+        <span className="text-gold font-black">{currentCategoryName}</span>
+      </div>
+
       {/* Title block */}
       <div className="border-b border-light-border pb-5 mb-8">
-        <h1 className="text-2xl sm:text-4xl font-bold text-dark">{t('nav.shop')}</h1>
-        <p className="text-xs sm:text-sm text-muted-text mt-1.5">
-          {locale === 'ar' ? `نعرض لك ${filteredProducts.length} منتجاً ممتازاً` : `Showing ${filteredProducts.length} premium Middle Eastern items`}
+        <h1 className="text-2xl sm:text-4xl font-black text-primary font-cairo leading-none">{currentCategoryName}</h1>
+        <p className="text-xs sm:text-sm text-muted-text mt-2 font-medium">
+          {locale === 'ar' 
+            ? `تسوق من تشكيلتنا المختارة من البقالة والمستلزمات الطازجة والمميزة.` 
+            : `Shop from our wide selection of authentic groceries and pantry essentials.`}
         </p>
       </div>
 
@@ -163,13 +216,13 @@ function ShopContent() {
         {/* Sidebar Filters - Desktop */}
         <div className="lg:block space-y-6">
           <div className="flex items-center justify-between border-b border-light-border pb-3">
-            <h3 className="font-bold text-sm text-dark flex items-center gap-1.5 uppercase tracking-wide">
+            <h3 className="font-bold text-sm text-primary flex items-center gap-1.5 uppercase tracking-wide">
               <SlidersHorizontal className="w-4 h-4 text-gold" />
               <span>{t('shop.filters')}</span>
             </h3>
             <button
               onClick={handleResetFilters}
-              className="text-xs text-primary font-semibold hover:underline"
+              className="text-xs text-accent font-bold hover:underline"
             >
               {t('shop.clear')}
             </button>
@@ -177,43 +230,50 @@ function ShopContent() {
 
           {/* Categories filter */}
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 select-none">
               {t('shop.filter.category')}
             </h4>
-            <div className="space-y-2">
-              {categories.map((cat) => (
-                <button
-                  key={cat.slug}
-                  onClick={() => toggleCategory(cat.slug)}
-                  className={`w-full flex items-center justify-between text-xs px-2.5 py-1.5 rounded-md text-left rtl:text-right transition-colors ${
-                    selectedCategories.includes(cat.slug)
-                      ? 'bg-cream text-primary font-bold'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  <span>{locale === 'ar' ? cat.arabicName : cat.name}</span>
-                  {selectedCategories.includes(cat.slug) && <Check className="w-3.5 h-3.5 text-primary" />}
-                </button>
-              ))}
+            <div className="space-y-1.5">
+              {categoriesList.map((cat) => {
+                const active = selectedCategories.includes(cat.slug);
+                const count = getCategoryCount(cat.slug);
+                return (
+                  <button
+                    key={cat.slug}
+                    onClick={() => toggleCategory(cat.slug)}
+                    className={`w-full flex items-center justify-between text-xs px-3 py-2.5 rounded-xl text-left rtl:text-right transition-colors ${
+                      active
+                        ? 'bg-primary text-white font-bold shadow-2xs'
+                        : 'text-gray-650 hover:bg-primary/5 font-medium'
+                    }`}
+                  >
+                    <span className="font-cairo">{locale === 'ar' ? cat.arabicName : cat.name}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-md font-mono ${active ? 'bg-white/10 text-white' : 'bg-gray-100 text-gray-500 font-bold'}`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
+
           {/* Price Filter */}
-          <div className="pt-4 border-t border-light-border">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
-              {locale === 'ar' ? 'السعر' : 'Price'}
+          <div className="pt-5 border-t border-light-border/60">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 select-none">
+              {locale === 'ar' ? 'السعر' : 'Price Range'}
             </h4>
-            <div className="space-y-1.5 text-xs text-gray-600">
+            <div className="space-y-2 text-xs text-gray-600 font-semibold">
               {(['all', 'under-5', '5-to-15', 'over-15'] as const).map((range) => (
-                <label key={range} className="flex items-center gap-2 cursor-pointer select-none">
+                <label key={range} className="flex items-center gap-2.5 cursor-pointer select-none">
                   <input
                     type="radio"
                     name="price-range"
                     checked={priceRange === (range === 'all' ? null : range)}
                     onChange={() => setPriceRange(range === 'all' ? null : range)}
-                    className="text-primary focus:ring-primary/20 accent-primary"
+                    className="text-primary focus:ring-primary/20 accent-primary w-4 h-4 border-gray-300"
                   />
                   <span>
-                    {range === 'all' && (locale === 'ar' ? 'الكل' : 'All Prices')}
+                    {range === 'all' && (locale === 'ar' ? 'جميع الأسعار' : 'All Prices')}
                     {range === 'under-5' && (locale === 'ar' ? 'أقل من $5' : 'Under $5')}
                     {range === '5-to-15' && (locale === 'ar' ? '$5 إلى $15' : '$5 to $15')}
                     {range === 'over-15' && (locale === 'ar' ? 'أكثر من $15' : 'Over $15')}
@@ -224,57 +284,37 @@ function ShopContent() {
           </div>
 
           {/* Brand Filter */}
-          <div className="pt-4 border-t border-light-border">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
+          <div className="pt-5 border-t border-light-border/60">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 select-none">
               {locale === 'ar' ? 'العلامة التجارية' : 'Brand'}
             </h4>
-            <div className="space-y-1.5 text-xs text-gray-600 max-h-40 overflow-y-auto pr-1">
-              {brandsList.map((brand) => (
-                <label key={brand} className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={selectedBrands.includes(brand)}
-                    onChange={() => {
-                      setSelectedBrands(prev => 
-                        prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]
-                      );
-                    }}
-                    className="rounded border-gray-300 text-primary focus:ring-primary/20 accent-primary"
-                  />
-                  <span>{brand}</span>
-                </label>
-              ))}
+            <div className="space-y-2 text-xs text-gray-600 font-semibold max-h-48 overflow-y-auto pr-1">
+              {brandsList.map((brand) => {
+                const count = getBrandCount(brand);
+                return (
+                  <label key={brand} className="flex items-center justify-between cursor-pointer select-none">
+                    <div className="flex items-center gap-2.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedBrands.includes(brand)}
+                        onChange={() => {
+                          setSelectedBrands(prev => 
+                            prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]
+                          );
+                        }}
+                        className="rounded border-gray-300 text-primary focus:ring-primary/20 accent-primary w-4 h-4"
+                      />
+                      <span>{brand}</span>
+                    </div>
+                    <span className="text-[10px] text-gray-400 font-bold font-mono">{count}</span>
+                  </label>
+                );
+              })}
             </div>
           </div>
-
-          {/* Origin Filter */}
-          <div className="pt-4 border-t border-light-border">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
-              {locale === 'ar' ? 'بلد المنشأ' : 'Origin'}
-            </h4>
-            <div className="space-y-1.5 text-xs text-gray-600 max-h-40 overflow-y-auto pr-1">
-              {originsList.map((origin) => (
-                <label key={origin} className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={selectedOrigins.includes(origin)}
-                    onChange={() => {
-                      setSelectedOrigins(prev => 
-                        prev.includes(origin) ? prev.filter(o => o !== origin) : [...prev, origin]
-                      );
-                    }}
-                    className="rounded border-gray-300 text-primary focus:ring-primary/20 accent-primary"
-                  />
-                  <span>{translateCountry(origin, locale)}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-
 
           {/* Certification / Stock checklist */}
-          <div className="pt-4 border-t border-light-border space-y-3">
+          <div className="pt-5 border-t border-light-border/60 space-y-3 font-semibold">
             <label className="flex items-center gap-2.5 cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -282,7 +322,7 @@ function ShopContent() {
                 onChange={(e) => setOnlyHalal(e.target.checked)}
                 className="w-4 h-4 rounded-md border-gray-300 text-primary focus:ring-primary/20 accent-primary"
               />
-              <span className="text-xs font-semibold text-dark">{t('shop.filter.halal')}</span>
+              <span className="text-xs text-dark">{t('shop.filter.halal')}</span>
             </label>
 
             <label className="flex items-center gap-2.5 cursor-pointer select-none">
@@ -292,43 +332,63 @@ function ShopContent() {
                 onChange={(e) => setOnlyInStock(e.target.checked)}
                 className="w-4 h-4 rounded-md border-gray-300 text-primary focus:ring-primary/20 accent-primary"
               />
-              <span className="text-xs font-semibold text-dark">{t('shop.filter.instock')}</span>
+              <span className="text-xs text-dark">{t('shop.filter.instock')}</span>
             </label>
           </div>
         </div>
 
         {/* Products Grid & Sorting */}
         <div className="lg:col-span-3 space-y-6">
+          
           {/* Sorting controls */}
-          <div className="flex flex-wrap items-center justify-between gap-4 bg-cream/40 border border-light-border p-3.5 rounded-xl">
-            <div className="text-xs text-muted-text">
+          <div className="flex items-center justify-between gap-4 bg-[#FAF7F0] border border-light-border p-3.5 rounded-xl">
+            <div className="text-xs text-muted-text font-bold">
               {locale === 'ar' ? (
                 <span>وجدت <strong>{filteredProducts.length}</strong> منتجاً</span>
               ) : (
-                <span>Found <strong>{filteredProducts.length}</strong> products</span>
+                <span>Showing <strong>{filteredProducts.length}</strong> products</span>
               )}
             </div>
 
-            <div className="flex items-center gap-2 text-xs font-semibold">
-              <span className="text-muted-text flex items-center gap-1.5">
-                <ArrowUpDown className="w-3.5 h-3.5 text-gold" />
-                <span>{t('shop.sort')}</span>
-              </span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs"
-              >
-                <option value="relevance">{t('shop.sort.relevance')}</option>
-                <option value="price_asc">{t('shop.sort.price_asc')}</option>
-                <option value="price_desc">{t('shop.sort.price_desc')}</option>
-                <option value="rating">{t('shop.sort.rating')}</option>
-                <option value="newest">{t('shop.sort.newest')}</option>
-              </select>
+            <div className="flex items-center gap-4 text-xs font-bold text-gray-500">
+              
+              {/* Grid / List layout switcher toggler */}
+              <div className="hidden sm:flex items-center border border-light-border rounded-lg overflow-hidden bg-white shrink-0">
+                <button 
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2 transition-all ${viewMode === 'grid' ? 'bg-primary text-white' : 'text-gray-400 hover:text-primary'}`}
+                  title="Grid View"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                </button>
+                <button 
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 transition-all ${viewMode === 'list' ? 'bg-primary text-white' : 'text-gray-400 hover:text-primary'}`}
+                  title="List View"
+                >
+                  <List className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Sort By Dropdown */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-text">{t('shop.sort')}</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="bg-white border border-light-border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs font-bold"
+                >
+                  <option value="relevance">{t('shop.sort.relevance')}</option>
+                  <option value="price_asc">{t('shop.sort.price_asc')}</option>
+                  <option value="price_desc">{t('shop.sort.price_desc')}</option>
+                  <option value="rating">{t('shop.sort.rating')}</option>
+                  <option value="newest">{t('shop.sort.newest')}</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          {/* Grid */}
+          {/* Grid View */}
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
               {[...Array(6)].map((_, i) => (
@@ -336,11 +396,21 @@ function ShopContent() {
               ))}
             </div>
           ) : filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
-              {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
+            viewMode === 'grid' ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
+                {filteredProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredProducts.map((product) => (
+                  <div key={product.id} className="w-full">
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </div>
+            )
           ) : (
             <div className="text-center py-16 bg-cream/10 border border-dashed border-light-border rounded-2xl">
               <RefreshCw className="w-8 h-8 text-gray-300 mx-auto mb-3 animate-spin duration-3000" />

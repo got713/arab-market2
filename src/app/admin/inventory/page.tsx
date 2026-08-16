@@ -130,7 +130,7 @@ export default function AdminInventoryPage() {
                 <th className="p-4">{locale === 'ar' ? 'تفاصيل المنتج' : 'Product details'}</th>
                 <th className="p-4">{locale === 'ar' ? 'الماركة / بلد المنشأ' : 'Supplier / Brand'}</th>
                 <th className="p-4">{locale === 'ar' ? 'حالة التنبيه' : 'Status Alert'}</th>
-                <th className="p-4">{locale === 'ar' ? 'وزن الحبة' : 'Unit Weight'}</th>
+                <th className="p-4">{locale === 'ar' ? 'وزن القطعة' : 'Unit Weight'}</th>
                 <th className="p-4">{locale === 'ar' ? 'تعديل كمية المخزن' : 'Manage Stock (Units)'}</th>
                 <th className="p-4 text-right">{locale === 'ar' ? 'حفظ سريع' : 'Quick Save'}</th>
               </tr>

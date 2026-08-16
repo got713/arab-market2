@@ -1,24 +1,25 @@
 import type { Metadata } from 'next';
-import { Poppins, Cairo } from 'next/font/google';
+import { Inter, Cairo } from 'next/font/google';
 import LocaleProvider from '@/components/layout/locale-provider';
 import LayoutWrapper from '@/components/layout/layout-wrapper';
 import './globals.css';
 
-const poppins = Poppins({
-  weight: ['300', '400', '500', '600', '700'],
+const inter = Inter({
   subsets: ['latin'],
-  variable: '--font-poppins',
+  variable: '--font-inter',
+  display: 'swap',
 });
 
 const cairo = Cairo({
-  weight: ['300', '400', '500', '600', '700'],
-  subsets: ['arabic'],
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
+  subsets: ['arabic', 'latin'],
   variable: '--font-cairo',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: 'Arab Market | Authentic Arabic & Middle Eastern Groceries',
-  description: 'Shop authentic Middle Eastern groceries, snacks, frozen foods, spices, sweets, and household essentials. Delivered across America.',
+  title: 'عرب ماركت | Arab Market — Middle Eastern Groceries Delivered Across America',
+  description: 'تسوق أفضل المنتجات العربية والشرق أوسطية — بقالة، حلويات، مشروبات، توابل، ومستلزمات منزلية. توصيل لكل أمريكا. Shop authentic Middle Eastern groceries delivered across America.',
 };
 
 export default function RootLayout({
@@ -29,7 +30,8 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${poppins.variable} ${cairo.variable} h-full antialiased`}
+      className={`${inter.variable} ${cairo.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-sans text-dark bg-white">
         <LocaleProvider>

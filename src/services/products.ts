@@ -1,92 +1,146 @@
 import { Product } from '../types';
-import { db } from './db';
-
-const delay = (ms = 100) => new Promise((resolve) => setTimeout(resolve, ms));
+import { ApiClient } from '../lib/api-client';
 
 export const ProductService = {
-  getProducts: async (includeInactive = false): Promise<Product[]> => {
-    await delay();
-    const list = db.getProducts();
-    return includeInactive ? list : list.filter((p) => p.active !== false);
+  getProducts: async (includeInactive = false, params?: any, locale: 'en' | 'ar' = 'en'): Promise<Product[]> => {
+    try {
+      const res = await ApiClient.get<any>('/products', {
+        params: {
+          all: includeInactive ? 'true' : 'false',
+          ...params
+        }
+      }, locale);
+      
+      // Handle Laravel pagination envelope if present
+      if (res && typeof res === 'object' && 'data' in res && Array.isArray(res.data)) {
+        return res.data as Product[];
+      }
+      return Array.isArray(res) ? res : [];
+    } catch (err) {
+      console.error('Error in getProducts:', err);
+      return [];
+    }
   },
 
-  getProductById: async (id: string): Promise<Product | null> => {
-    await delay();
-    const list = db.getProducts();
-    return list.find((p) => p.id === id) || null;
-  },
-
-  getProductBySlug: async (slug: string): Promise<Product | null> => {
-    await delay();
-    const list = db.getProducts();
-    return list.find((p) => p.slug === slug && p.active !== false) || null;
-  },
-
-  getFeaturedProducts: async (): Promise<Product[]> => {
-    await delay();
-    const list = db.getProducts();
-    return list.filter((p) => p.featured && p.active !== false);
-  },
-
-  getBestSellers: async (): Promise<Product[]> => {
-    await delay();
-    const list = db.getProducts();
-    return list.filter((p) => p.bestSeller && p.active !== false);
-  },
-
-  getProductsByCategory: async (categorySlug: string): Promise<Product[]> => {
-    await delay();
-    const list = db.getProducts();
-    return list.filter(
-      (p) => p.category.toLowerCase() === categorySlug.toLowerCase() && p.active !== false
-    );
-  },
-
-  searchProducts: async (query: string): Promise<Product[]> => {
-    await delay();
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    const list = db.getProducts();
-    return list.filter(
-      (p) =>
-        p.active !== false &&
-        (p.name.toLowerCase().includes(q) ||
-          p.brand.toLowerCase().includes(q) ||
-          p.category.toLowerCase().includes(q) ||
-          p.country.toLowerCase().includes(q) ||
-          p.arabicName.includes(q) ||
-          (p.description && p.description.toLowerCase().includes(q)))
-    );
-  },
-
-  createProduct: async (product: Omit<Product, 'id'>): Promise<Product> => {
-    await delay();
-    const list = db.getProducts();
-    const newProduct: Product = {
-      ...product,
-      id: `prod-${Date.now()}`,
+  getProductsPaginated: async (params?: any, locale: 'en' | 'ar' = 'en'): Promise<{
+    data: Product[];
+    current_page: number;
+    last_page: number;
+    total: number;
+  }> => {
+    const res = await ApiClient.get<any>('/products', { params }, locale);
+    if (res && typeof res === 'object' && 'data' in res) {
+      return res;
+    }
+    return {
+      data: Array.isArray(res) ? res : [],
+      current_page: 1,
+      last_page: 1,
+      total: Array.isArray(res) ? res.length : 0,
     };
-    list.unshift(newProduct);
-    db.saveProducts(list);
-    return newProduct;
   },
 
-  updateProduct: async (product: Product): Promise<Product> => {
-    await delay();
-    const list = db.getProducts();
-    const index = list.findIndex((p) => p.id === product.id);
-    if (index === -1) throw new Error('Product not found');
-    list[index] = product;
-    db.saveProducts(list);
-    return product;
+  getProductById: async (id: string, locale: 'en' | 'ar' = 'en'): Promise<Product | null> => {
+    try {
+      return await ApiClient.get<Product>(`/products/${id}`, undefined, locale);
+    } catch (err) {
+      return null;
+    }
   },
 
-  deleteProduct: async (id: string): Promise<boolean> => {
-    await delay();
-    const list = db.getProducts();
-    const filtered = list.filter((p) => p.id !== id);
-    if (filtered.length === list.length) return false;
-    db.saveProducts(filtered);
-    return true;
+  getProductBySlug: async (slug: string, locale: 'en' | 'ar' = 'en'): Promise<Product | null> => {
+    try {
+      return await ApiClient.get<Product>(`/products/${slug}`, undefined, locale);
+    } catch (err) {
+      return null;
+    }
+  },
+
+  getFeaturedProducts: async (locale: 'en' | 'ar' = 'en'): Promise<Product[]> => {
+    return ProductService.getProducts(false, { filter: 'featured' }, locale);
+  },
+
+  getBestSellers: async (locale: 'en' | 'ar' = 'en'): Promise<Product[]> => {
+    return ProductService.getProducts(false, { filter: 'bestseller' }, locale);
+  },
+
+  getProductsByCategory: async (categorySlug: string, locale: 'en' | 'ar' = 'en'): Promise<Product[]> => {
+    return ProductService.getProducts(false, { category: categorySlug }, locale);
+  },
+
+  searchProducts: async (query: string, locale: 'en' | 'ar' = 'en'): Promise<Product[]> => {
+    const q = query.trim();
+    if (!q) return [];
+    return ProductService.getProducts(false, { search: q }, locale);
+  },
+
+  createProduct: async (product: Omit<Product, 'id'>, locale: 'en' | 'ar' = 'en'): Promise<Product> => {
+    const payload = {
+      category_id: product.categoryId,
+      subcategory_id: product.subcategoryId,
+      name: product.name,
+      arabic_name: product.arabicName,
+      slug: product.slug,
+      brand: product.brand,
+      sku: product.sku,
+      description: product.description,
+      arabic_description: product.arabicDescription,
+      weight: product.weight,
+      ingredients: product.ingredients,
+      allergens: product.allergens,
+      price: product.purchaseOptions.single.price,
+      pack_price: product.purchaseOptions.pack.enabled ? product.purchaseOptions.pack.price : null,
+      pack_quantity: product.purchaseOptions.pack.quantity,
+      case_price: product.purchaseOptions.case.enabled ? product.purchaseOptions.case.price : null,
+      case_quantity: product.purchaseOptions.case.quantity,
+      featured: product.featured,
+      best_seller: product.bestSeller,
+      weekly_deal: product.weeklyDeal,
+      active: product.active,
+      stock: product.stock || 0,
+      images: product.images,
+    };
+
+    return ApiClient.post<Product>('/admin/products', payload, undefined, locale);
+  },
+
+  updateProduct: async (product: Product, locale: 'en' | 'ar' = 'en'): Promise<Product> => {
+    const payload = {
+      category_id: product.categoryId,
+      subcategory_id: product.subcategoryId,
+      name: product.name,
+      arabic_name: product.arabicName,
+      slug: product.slug,
+      brand: product.brand,
+      sku: product.sku,
+      description: product.description,
+      arabic_description: product.arabicDescription,
+      weight: product.weight,
+      ingredients: product.ingredients,
+      allergens: product.allergens,
+      price: product.purchaseOptions.single.price,
+      pack_price: product.purchaseOptions.pack.enabled ? product.purchaseOptions.pack.price : null,
+      pack_quantity: product.purchaseOptions.pack.quantity,
+      case_price: product.purchaseOptions.case.enabled ? product.purchaseOptions.case.price : null,
+      case_quantity: product.purchaseOptions.case.quantity,
+      featured: product.featured,
+      best_seller: product.bestSeller,
+      weekly_deal: product.weeklyDeal,
+      active: product.active,
+      stock: product.stock || 0,
+      images: product.images,
+    };
+
+    return ApiClient.put<Product>(`/admin/products/${product.id}`, payload, undefined, locale);
+  },
+
+  deleteProduct: async (id: string, locale: 'en' | 'ar' = 'en'): Promise<boolean> => {
+    try {
+      await ApiClient.delete(`/admin/products/${id}`, undefined, locale);
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
   },
 };

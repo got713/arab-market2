@@ -1,12 +1,15 @@
 export interface PurchaseOptionDetails {
   price: number;
-  quantity: number; // 1 for single, e.g., 6 for pack, 12 for case
+  quantity: number;   // 1 for single, e.g., 6 for pack, 12 for case
+  enabled?: boolean;  // undefined = true (shown to customers); false = hidden
+  label?: string;     // Custom label override, e.g. "علبة" or "كيلو"
+  labelAr?: string;   // Arabic label override
 }
 
 export interface PurchaseOptions {
   single: PurchaseOptionDetails;
-  pack: PurchaseOptionDetails;
-  case: PurchaseOptionDetails;
+  pack:   PurchaseOptionDetails;
+  case:   PurchaseOptionDetails;
 }
 
 export interface ProductReview {
@@ -44,6 +47,8 @@ export interface Product {
   featured: boolean;
   bestSeller: boolean;
   newArrival?: boolean;
+  weeklyDeal?: boolean;
+  sku?: string;
   tags?: string[];
   active: boolean; // For admin enablement/disablement
 }
@@ -52,6 +57,10 @@ export interface Subcategory {
   slug: string;
   name: string;
   arabicName: string;
+  image?: string;
+  description?: string;
+  active?: boolean;
+  displayOrder?: number;
 }
 
 export interface Category {
@@ -63,10 +72,14 @@ export interface Category {
   arabicDescription?: string;
   image: string;
   icon: string;
+  active?: boolean;
+  featured?: boolean;
+  displayOrder?: number;
   subcategories: Subcategory[];
 }
 
 export interface CartItem {
+  id?: number;
   product: Product;
   option: 'single' | 'pack' | 'case';
   quantity: number;
@@ -84,6 +97,7 @@ export interface OrderCustomer {
 
 export interface Order {
   id: string;
+  databaseId?: number;
   customer: OrderCustomer;
   items: CartItem[];
   subtotal: number;
@@ -91,6 +105,7 @@ export interface Order {
   discount: number;
   total: number;
   paymentMethod: string;
+  paymentStatus?: string;
   status: 'Pending' | 'Processing' | 'Shipped' | 'Out for Delivery' | 'Delivered' | 'Cancelled';
   date: string;
   trackingNumber: string;
@@ -108,9 +123,12 @@ export interface Customer {
 
 export interface Coupon {
   code: string;
-  discountPercent: number;
+  discountPercent?: number;
   minOrder: number;
   usageCount: number;
   maxUsage: number;
   expires: string;
+  type?: 'percentage' | 'fixed';
+  value?: number;
+  active?: boolean;
 }

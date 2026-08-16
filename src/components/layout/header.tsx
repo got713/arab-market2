@@ -11,7 +11,8 @@ import { ProductService } from '@/services/products';
 import { Product } from '@/types';
 import Logo from '../ui/logo';
 import ZipModal from './zip-modal';
-import { categories } from '@/data/categories';
+import { Category } from '@/types';
+import { CategoryService } from '@/services/categories';
 import { 
   Search, 
   MapPin, 
@@ -21,7 +22,13 @@ import {
   Globe, 
   ChevronDown, 
   TrendingUp,
-  Store
+  Store,
+  Home,
+  LogOut,
+  HelpCircle,
+  Menu,
+  X,
+  Package
 } from 'lucide-react';
 
 export default function Header() {
@@ -36,9 +43,26 @@ export default function Header() {
   const [isSuggestOpen, setIsSuggestOpen] = useState(false);
   const [isZipOpen, setIsZipOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
-  const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCategoriesDropdownOpen, setIsCategoriesDropdownOpen] = useState(false);
+  const [categoriesList, setCategoriesList] = useState<Category[]>([]);
+  
   const suggestRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
+  const catDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fetch dynamic categories on mount
+  useEffect(() => {
+    const fetchCats = async () => {
+      try {
+        const list = await CategoryService.getCategories(false);
+        setCategoriesList(list);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchCats();
+  }, []);
 
   // Cart total items count
   const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
@@ -57,7 +81,7 @@ export default function Header() {
       }
     };
 
-    const timer = setTimeout(fetchSuggestions, 200);
+    const timer = setTimeout(fetchSuggestions, 150);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
@@ -69,6 +93,9 @@ export default function Header() {
       }
       if (accountRef.current && !accountRef.current.contains(event.target as Node)) {
         setIsAccountMenuOpen(false);
+      }
+      if (catDropdownRef.current && !catDropdownRef.current.contains(event.target as Node)) {
+        setIsCategoriesDropdownOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -89,46 +116,99 @@ export default function Header() {
     router.push(`/product/${slug}`);
   };
 
+  const syncCartWithServer = useCartStore((state) => state.syncCartWithServer);
+
   // Demo Login utility
-  const handleQuickLogin = (role: 'customer' | 'admin') => {
-    if (role === 'admin') {
-      loginAdmin();
-      router.push('/admin');
-    } else {
-      loginCustomer('ahmed.masri@gmail.com', 'Ahmed Al-Masri');
-      router.push('/account');
+  const handleQuickLogin = async (role: 'customer' | 'admin') => {
+    try {
+      if (role === 'admin') {
+        await loginAdmin();
+        await syncCartWithServer();
+        router.push('/admin');
+      } else {
+        await loginCustomer();
+        await syncCartWithServer();
+        router.push('/account');
+      }
+    } catch (err) {
+      console.error(err);
     }
     setIsAccountMenuOpen(false);
   };
 
-  // Extra admin login helper inside store
   const loginAdmin = useAuthStore((state) => state.loginAdmin);
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-white shadow-xs border-b border-light-border">
-      {/* Main Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
-        {/* Brand Logo */}
-        <Link href="/" className="flex-shrink-0">
-          <Logo />
-        </Link>
+    <header className="sticky top-0 z-40 w-full bg-white border-b border-light-border shadow-xs">
+      
+      {/* 1. TOP UTILITY BAR (Desktop Only) */}
+      <div className="hidden md:block bg-[#FAF7F0] border-b border-light-border/60 py-1.5 text-xs text-dark/85">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setLocale(locale === 'en' ? 'ar' : 'en')}
+              className="flex items-center gap-1.5 hover:text-primary font-bold transition-colors font-cairo"
+            >
+              <Globe className="w-3.5 h-3.5 text-gold" />
+              <span>{locale === 'en' ? 'العربية' : 'English'}</span>
+            </button>
+            <span className="text-light-border font-light">|</span>
+            <button
+              onClick={() => setIsZipOpen(true)}
+              className="flex items-center gap-1 hover:text-primary transition-colors font-semibold"
+            >
+              <MapPin className="w-3.5 h-3.5 text-gold" />
+              <span>
+                {isZipChecked && isDeliveryAvailable ? `${t('header.zip_code')}: ${shippingZip}` : t('header.enter_zip')}
+              </span>
+            </button>
+          </div>
+          <div className="flex items-center gap-4 font-bold">
+            <Link href="/track-order" className="hover:text-primary transition-colors">
+              {locale === 'ar' ? 'تتبع الطلب' : 'Track Order'}
+            </Link>
+            <span className="text-light-border font-light">|</span>
+            <Link href="/faq" className="hover:text-primary transition-colors flex items-center gap-1">
+              <HelpCircle className="w-3.5 h-3.5 text-gold" />
+              <span>{locale === 'ar' ? 'مساعدة' : 'Help'}</span>
+            </Link>
+          </div>
+        </div>
+      </div>
 
-        {/* Search Bar container */}
-        <div ref={suggestRef} className="hidden md:flex flex-1 max-w-2xl relative">
+      {/* 2. MAIN HEADER */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
+        
+        {/* Left: Hamburger menu for mobile + Logo */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="md:hidden p-2 text-dark hover:text-primary transition-colors rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label="Menu"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+          <Link href="/" className="flex-shrink-0">
+            <Logo />
+          </Link>
+        </div>
+
+        {/* Center: Large Prominent Search Bar (Desktop Only) */}
+        <div ref={suggestRef} className="hidden md:flex flex-1 max-w-xl lg:max-w-2xl relative">
           <form onSubmit={handleSearchSubmit} className="w-full flex">
             <div className="relative flex-1">
               <input
                 type="text"
-                placeholder={t('header.search')}
+                placeholder={locale === 'ar' ? 'ابحث عن مواد البقالة، مقرمشات، شاي، توابل...' : 'Search for groceries, snacks, tea, spices...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-4 pr-10 py-2.5 rounded-l-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm rtl:pr-4 rtl:pl-10"
+                className="w-full pl-4 pr-10 py-2.5 rounded-l-xl border border-light-border bg-[#FAF7F0] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm font-cairo rtl:pr-4 rtl:pl-10 rtl:rounded-r-xl rtl:rounded-l-none"
               />
-              <Search className="absolute right-3.5 top-3 w-4.5 h-4.5 text-gray-400 pointer-events-none rtl:left-3.5 rtl:right-auto" />
+              <Search className="absolute right-3.5 top-3.5 w-4 h-4 text-muted-text pointer-events-none rtl:left-3.5 rtl:right-auto" />
             </div>
             <button
               type="submit"
-              className="bg-primary hover:bg-primary-dark text-cream px-6 rounded-r-full font-medium text-sm transition-colors duration-150 rtl:rounded-r-none rtl:rounded-l-full"
+              className="bg-primary hover:bg-primary-light text-white px-6 rounded-r-xl font-cairo font-bold text-sm transition-colors duration-150 py-2.5 rtl:rounded-r-none rtl:rounded-l-xl shrink-0"
             >
               {locale === 'ar' ? 'بحث' : 'Search'}
             </button>
@@ -136,25 +216,25 @@ export default function Header() {
 
           {/* Search Suggestions Dropdown */}
           {isSuggestOpen && suggestions.length > 0 && (
-            <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-light-border rounded-xl shadow-lg overflow-hidden z-50 animate-fadeIn">
-              <div className="p-2 border-b border-light-border text-xs text-gray-500 font-semibold flex items-center gap-1">
+            <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-light-border rounded-xl shadow-lg overflow-hidden z-50 animate-fadeIn">
+              <div className="p-2.5 bg-[#FAF7F0] border-b border-light-border text-xs text-gray-500 font-bold flex items-center gap-1">
                 <TrendingUp className="w-3.5 h-3.5 text-gold" />
-                <span>{locale === 'ar' ? 'اقتراحات المنتجات' : 'Suggested Products'}</span>
+                <span>{locale === 'ar' ? 'اقتراحات البحث' : 'Suggested Products'}</span>
               </div>
               <div className="divide-y divide-gray-100">
                 {suggestions.map((product) => (
                   <button
                     key={product.id}
                     onClick={() => handleSuggestionClick(product.slug)}
-                    className="w-full px-4 py-2.5 text-left rtl:text-right hover:bg-cream/40 flex items-center justify-between text-sm transition-colors"
+                    className="w-full px-4 py-3 text-left rtl:text-right hover:bg-cream/40 flex items-center justify-between text-sm transition-colors"
                   >
                     <div>
-                      <span className="font-semibold text-dark block">
+                      <span className="font-bold text-dark block">
                         {locale === 'ar' ? product.arabicName : product.name}
                       </span>
                       <span className="text-xs text-muted-text">{product.brand} • {product.weight}</span>
                     </div>
-                    <span className="text-primary font-semibold text-xs bg-cream/70 px-2.5 py-1 rounded-md border border-light-border">
+                    <span className="text-primary font-bold text-xs bg-[#FAF7F0] px-2.5 py-1 rounded-md border border-light-border">
                       ${product.purchaseOptions.single.price}
                     </span>
                   </button>
@@ -164,117 +244,127 @@ export default function Header() {
           )}
         </div>
 
-        {/* Actions (ZIP, Account, Wishlist, Cart, Lang) */}
-        <div className="flex items-center gap-4 sm:gap-6">
-          {/* ZIP code button */}
-          <button
-            onClick={() => setIsZipOpen(true)}
-            className="flex items-center gap-1.5 text-xs sm:text-sm text-dark hover:text-primary transition-colors text-left"
-          >
-            <MapPin className="w-4.5 h-4.5 text-gold flex-shrink-0" />
-            <div className="hidden sm:block">
-              <span className="block text-[10px] uppercase text-muted-text font-semibold leading-none">
-                {t('header.zip_code')}
-              </span>
-              <span className="font-medium text-xs">
-                {isZipChecked && isDeliveryAvailable ? shippingZip : t('header.enter_zip')}
-              </span>
-            </div>
-          </button>
-
+        {/* Right: Actions (Account, Wishlist, Cart) */}
+        <div className="flex items-center gap-1 sm:gap-4 md:gap-5">
+          
           {/* Account Dropdown */}
           <div ref={accountRef} className="relative">
             <button
               onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
-              className="flex items-center gap-1 text-dark hover:text-primary transition-colors py-1"
+              className="flex items-center gap-1.5 text-dark hover:text-primary transition-colors py-2 px-1 rounded-lg min-h-[44px] min-w-[44px] justify-center"
             >
-              <User className="w-4.5 h-4.5 flex-shrink-0" />
-              <span className="hidden lg:inline text-sm font-medium">
+              <User className="w-5 h-5 flex-shrink-0 text-dark/95" />
+              <span className="hidden lg:inline text-xs font-bold font-cairo">
                 {isAuthenticated ? (user?.name.split(' ')[0]) : t('header.account')}
               </span>
-              <ChevronDown className="w-3.5 h-3.5 text-gray-500 hidden lg:inline" />
+              <ChevronDown className="w-3 h-3 text-gray-400 hidden lg:inline" />
             </button>
 
             {isAccountMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-light-border rounded-xl shadow-lg py-2 z-50 animate-fadeIn rtl:left-0 rtl:right-auto">
+              <div className="absolute right-0 top-full mt-1.5 w-64 bg-white border border-light-border rounded-xl shadow-lg py-0 z-50 overflow-hidden animate-fadeIn rtl:left-0 rtl:right-auto">
                 {isAuthenticated ? (
                   <>
-                    <div className="px-4 py-2 border-b border-light-border">
-                      <span className="block text-xs text-muted-text">{t('account.welcome')}</span>
-                      <span className="block font-semibold text-dark truncate">{user?.name}</span>
+                    <div className="px-4 py-3.5 bg-[#FAF7F0] border-b border-light-border/80 flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm shrink-0">
+                        {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                      <div className="min-w-0">
+                        <span className="block text-[10px] text-muted-text font-bold uppercase tracking-wider">
+                          {t('account.welcome')}
+                        </span>
+                        <strong className="block text-xs font-bold text-dark truncate font-cairo mt-0.5">
+                          {user?.name}
+                        </strong>
+                        <span className="block text-[9px] text-gray-400 truncate mt-0.5">
+                          {user?.email}
+                        </span>
+                      </div>
                     </div>
-                    {isAdmin ? (
-                      <Link
-                        href="/admin"
-                        onClick={() => setIsAccountMenuOpen(false)}
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-primary hover:bg-cream/40"
+                    
+                    <div className="p-1.5 space-y-0.5">
+                      {isAdmin ? (
+                        <Link
+                          href="/admin"
+                          onClick={() => setIsAccountMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-primary hover:bg-[#FAF7F0] rounded-lg transition-colors"
+                        >
+                          <Store className="w-4 h-4 text-gold flex-shrink-0" />
+                          <span className="font-cairo font-bold">{t('nav.admin')}</span>
+                        </Link>
+                      ) : (
+                        <Link
+                          href="/account"
+                          onClick={() => setIsAccountMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-dark hover:bg-[#FAF7F0] rounded-lg transition-colors"
+                        >
+                          <User className="w-4 h-4 text-gold flex-shrink-0" />
+                          <span className="font-cairo font-bold">{t('account.title')}</span>
+                        </Link>
+                      )}
+                    </div>
+                    
+                    <div className="border-t border-light-border/60 p-1.5">
+                      <button
+                        onClick={() => {
+                          logout();
+                          setIsAccountMenuOpen(false);
+                          router.push('/');
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-red-650 hover:bg-red-50/50 rounded-lg transition-colors text-left rtl:text-right"
                       >
-                        <Store className="w-4 h-4 text-gold" />
-                        <span>{t('nav.admin')}</span>
-                      </Link>
-                    ) : (
-                      <Link
-                        href="/account"
-                        onClick={() => setIsAccountMenuOpen(false)}
-                        className="block px-4 py-2.5 text-sm text-dark hover:bg-cream/40"
-                      >
-                        {t('account.title')}
-                      </Link>
-                    )}
-                    <button
-                      onClick={() => {
-                        logout();
-                        setIsAccountMenuOpen(false);
-                        router.push('/');
-                      }}
-                      className="w-full text-left rtl:text-right px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-light-border mt-1"
-                    >
-                      {t('account.logout')}
-                    </button>
+                        <LogOut className="w-4 h-4 flex-shrink-0" />
+                        <span className="font-cairo">{t('account.logout')}</span>
+                      </button>
+                    </div>
                   </>
                 ) : (
                   <>
-                    <div className="px-4 py-2 border-b border-light-border text-center">
-                      <span className="block text-xs text-muted-text mb-2">
+                    <div className="px-4 py-3 bg-[#FAF7F0] border-b border-light-border text-center">
+                      <span className="block text-[10px] text-muted-text font-bold uppercase tracking-wider mb-2">
                         {locale === 'ar' ? 'دخول سريع تجريبي' : 'Demo Quick Logins'}
                       </span>
-                      <div className="grid grid-cols-2 gap-1.5">
+                      <div className="grid grid-cols-2 gap-2">
                         <button
                           onClick={() => handleQuickLogin('customer')}
-                          className="bg-primary text-cream px-2 py-1.5 text-xs font-semibold rounded-md hover:bg-primary-dark transition-colors"
+                          className="bg-primary hover:bg-primary-light text-white px-2 py-2 text-xs font-bold rounded-lg transition-colors font-cairo shadow-xs"
                         >
-                          {locale === 'ar' ? 'عميل' : 'Customer'}
+                          {locale === 'ar' ? 'حساب عميل' : 'Customer'}
                         </button>
                         <button
                           onClick={() => handleQuickLogin('admin')}
-                          className="bg-gold text-dark px-2 py-1.5 text-xs font-semibold rounded-md hover:bg-gold-light transition-colors"
+                          className="bg-gold hover:bg-gold-light text-dark px-2 py-2 text-xs font-bold rounded-lg transition-colors font-cairo shadow-xs"
                         >
-                          {locale === 'ar' ? 'مسؤول' : 'Admin'}
+                          {locale === 'ar' ? 'حساب مسؤول' : 'Admin'}
                         </button>
                       </div>
                     </div>
-                    <Link
-                      href="/account"
-                      onClick={() => setIsAccountMenuOpen(false)}
-                      className="block px-4 py-2.5 text-sm text-dark hover:bg-cream/40"
-                    >
-                      {locale === 'ar' ? 'الذهاب لصفحة الدخول' : 'Go to Login Page'}
-                    </Link>
+                    <div className="p-1.5">
+                      <Link
+                        href="/account"
+                        onClick={() => setIsAccountMenuOpen(false)}
+                        className="flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold text-dark hover:bg-[#FAF7F0] rounded-lg transition-colors text-center"
+                      >
+                        <User className="w-4 h-4 text-gold" />
+                        <span className="font-cairo">
+                          {locale === 'ar' ? 'الذهاب لصفحة الدخول' : 'Go to Login Page'}
+                        </span>
+                      </Link>
+                    </div>
                   </>
                 )}
               </div>
             )}
           </div>
-
-          {/* Wishlist Link */}
+          
+          {/* Wishlist Link (Desktop Only) */}
           <Link
             href="/wishlist"
-            className="relative p-1 text-dark hover:text-primary transition-colors"
+            className="relative p-2 text-dark hover:text-primary transition-colors hidden md:flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg"
             title={t('header.wishlist')}
           >
-            <Heart className="w-4.5 h-4.5" />
+            <Heart className="w-5 h-5" />
             {wishlistCount > 0 && (
-              <span className="absolute -top-1 -right-1.5 bg-gold text-dark font-bold text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
+              <span className="absolute top-1 right-1 bg-gold text-dark font-bold text-[10px] w-4.5 h-4.5 rounded-full flex items-center justify-center border border-white">
                 {wishlistCount}
               </span>
             )}
@@ -283,44 +373,43 @@ export default function Header() {
           {/* Cart Link */}
           <Link
             href="/cart"
-            className="relative p-1 text-dark hover:text-primary transition-colors"
+            className="relative p-2 text-dark hover:text-primary transition-colors flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg"
             title={t('header.cart')}
           >
-            <ShoppingCart className="w-4.5 h-4.5" />
+            <ShoppingCart className="w-5 h-5" />
             {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1.5 bg-primary text-cream font-bold text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
+              <span className="absolute top-1 right-1 bg-primary text-white font-bold text-[10px] w-4.5 h-4.5 rounded-full flex items-center justify-center border border-white">
                 {cartCount}
               </span>
             )}
           </Link>
-
-          {/* Language Switcher */}
+          
+          {/* Language Switcher (Mobile Only) */}
           <button
             onClick={() => setLocale(locale === 'en' ? 'ar' : 'en')}
-            className="flex items-center gap-1.5 text-sm text-primary font-bold hover:text-gold transition-colors py-1 pl-1 border-l border-light-border rtl:border-l-0 rtl:border-r rtl:pr-1"
+            className="md:hidden flex min-h-[44px] min-w-[44px] items-center justify-center text-xs font-bold text-primary"
           >
-            <Globe className="w-4 h-4" />
-            <span>{locale === 'en' ? 'العربية' : 'EN'}</span>
+            {locale === 'en' ? 'العربية' : 'EN'}
           </button>
         </div>
       </div>
 
-      {/* Mobile Search Bar */}
-      <div className="px-4 py-2.5 bg-white border-t border-light-border md:hidden relative">
+      {/* 3. MOBILE SEARCH BAR CONTAINER (Mobile Only) */}
+      <div className="px-4 py-2 bg-white border-t border-light-border/60 md:hidden relative">
         <form onSubmit={handleSearchSubmit} className="w-full flex">
           <div className="relative flex-1">
             <input
               type="text"
-              placeholder={t('header.search')}
+              placeholder={locale === 'ar' ? 'ابحث عن منتجات...' : 'Search groceries...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-4 pr-10 py-2 rounded-l-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs rtl:pr-4 rtl:pl-10"
+              className="w-full pl-3 pr-9 py-2 rounded-lg border border-light-border bg-[#FAF7F0] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs font-cairo rtl:pr-3 rtl:pl-9"
             />
-            <Search className="absolute right-3.5 top-2.5 w-4 h-4 text-gray-400 pointer-events-none rtl:left-3.5 rtl:right-auto" />
+            <Search className="absolute right-3 top-2.5 w-3.5 h-3.5 text-muted-text pointer-events-none rtl:left-3/4 rtl:right-auto" />
           </div>
           <button
             type="submit"
-            className="bg-primary hover:bg-primary-dark text-cream px-4 rounded-r-full font-semibold text-xs transition-colors duration-150 rtl:rounded-r-none rtl:rounded-l-full"
+            className="bg-primary hover:bg-primary-light text-white px-4 rounded-lg font-semibold text-xs ml-1.5 rtl:mr-1.5 rtl:ml-0 transition-colors shrink-0"
           >
             {locale === 'ar' ? 'بحث' : 'Search'}
           </button>
@@ -340,12 +429,12 @@ export default function Header() {
                   className="w-full px-4 py-2.5 text-left rtl:text-right hover:bg-cream/40 flex items-center justify-between text-xs transition-colors"
                 >
                   <div>
-                    <span className="font-semibold text-dark block">
+                    <span className="font-bold text-dark block">
                       {locale === 'ar' ? product.arabicName : product.name}
                     </span>
                     <span className="text-[10px] text-muted-text">{product.brand} • {product.weight}</span>
                   </div>
-                  <span className="text-primary font-semibold text-[10px] bg-cream/70 px-2 py-0.5 rounded-md border border-light-border">
+                  <span className="text-primary font-bold text-[10px] bg-[#FAF7F0] px-2 py-0.5 rounded-md border border-light-border">
                     ${product.purchaseOptions.single.price}
                   </span>
                 </button>
@@ -355,84 +444,191 @@ export default function Header() {
         )}
       </div>
 
-      {/* Sub navigation bar (Categories & Pages) */}
-      <div className="bg-cream border-t border-light-border overflow-x-auto no-scrollbar">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between py-2 text-xs sm:text-sm font-semibold tracking-wide gap-6 whitespace-nowrap">
-          <div className="flex items-center gap-4 sm:gap-6 relative">
-            <Link href="/" className="text-dark hover:text-primary transition-colors">
-              {t('nav.home')}
-            </Link>
-            {/* Shop with Mega Menu Toggle */}
-            <div 
-              className="relative"
-              onMouseEnter={() => setIsMegaMenuOpen(true)}
-              onMouseLeave={() => setIsMegaMenuOpen(false)}
+      {/* 4. SUB-NAVIGATION BAR (Desktop Only) */}
+      <div className="hidden md:block bg-white border-t border-light-border/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center py-2.5 text-xs font-bold tracking-wide gap-8 whitespace-nowrap overflow-x-auto no-scrollbar">
+          
+          {/* Categories Dropdown Filter */}
+          <div ref={catDropdownRef} className="relative">
+            <button
+              onClick={() => setIsCategoriesDropdownOpen(!isCategoriesDropdownOpen)}
+              className="flex items-center gap-1.5 text-primary hover:text-gold transition-colors font-bold uppercase tracking-wider"
             >
-              <Link 
-                href="/shop" 
-                className="text-dark hover:text-primary transition-colors flex items-center gap-1 py-1 focus:outline-none"
-                onClick={() => setIsMegaMenuOpen(false)}
-              >
-                <span>{t('nav.shop')}</span>
-                <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-              </Link>
-              
-              {/* Mega Menu Dropdown */}
-              {isMegaMenuOpen && (
-                <div 
-                  className="absolute top-full ltr:left-0 rtl:right-0 ltr:right-auto rtl:left-auto z-50 bg-white border border-light-border rounded-xl shadow-xl p-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 text-xs sm:text-sm mt-1 fade-in"
-                  style={{ minWidth: '780px' }}
-                >
-                  {categories.map((cat) => (
-                    <div key={cat.slug} className="space-y-2.5 whitespace-normal" style={{ minWidth: '110px' }}>
-                      <Link
-                        href={`/category/${cat.slug}`}
-                        onClick={() => setIsMegaMenuOpen(false)}
-                        className="font-bold text-primary hover:text-gold transition-colors block border-b border-light-border pb-1 text-xs"
-                      >
-                        {locale === 'ar' ? cat.arabicName : cat.name}
-                      </Link>
-                      <div className="flex flex-col gap-1 text-[10px] sm:text-[11px] text-gray-500 font-medium">
-                        {cat.subcategories.map((sub) => (
-                          <Link
-                            key={sub.slug}
-                            href={`/shop?category=${cat.slug}`}
-                            onClick={() => setIsMegaMenuOpen(false)}
-                            className="hover:text-primary transition-colors py-0.5"
-                          >
-                            {locale === 'ar' ? sub.arabicName : sub.name}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <Link href="/shop?filter=deals" className="text-dark hover:text-primary transition-colors">
-              {t('nav.deals')}
-            </Link>
-            <Link href="/shop?filter=bestseller" className="text-dark hover:text-primary transition-colors">
-              {t('nav.bestsellers')}
-            </Link>
-            <Link href="/shop?sort=newest" className="text-dark hover:text-primary transition-colors">
-              {t('nav.newarrivals')}
-            </Link>
+              <Package className="w-4 h-4 text-gold shrink-0" />
+              <span>{locale === 'ar' ? 'تسوق بالأقسام' : 'Shop by Category'}</span>
+              <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+            </button>
+            
+            {isCategoriesDropdownOpen && (
+              <div className="absolute top-full ltr:left-0 rtl:right-0 mt-2 bg-white border border-light-border rounded-xl shadow-xl p-4 w-56 z-50 animate-fadeIn">
+                {categoriesList.map((cat) => (
+                  <Link
+                    key={cat.slug}
+                    href={`/category/${cat.slug}`}
+                    onClick={() => setIsCategoriesDropdownOpen(false)}
+                    className="block px-3 py-2.5 rounded-lg text-xs font-bold text-dark hover:bg-[#FAF7F0] hover:text-primary transition-colors text-left rtl:text-right"
+                  >
+                    {locale === 'ar' ? cat.arabicName : cat.name}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center gap-4 text-xs font-bold uppercase tracking-wider">
-            <Link href="/track-order" className="text-gold hover:text-primary transition-colors">
-              {t('nav.track')}
-            </Link>
-            <Link href="/about" className="text-gray-500 hover:text-primary transition-colors">
-              {t('nav.about')}
-            </Link>
-          </div>
+          {/* Regular nav pages links */}
+          <Link href="/" className="text-dark hover:text-primary transition-colors">
+            {t('nav.home')}
+          </Link>
+          <Link href="/shop" className="text-dark hover:text-primary transition-colors">
+            {t('nav.shop')}
+          </Link>
+          <Link href="/shop?filter=bestseller" className="text-dark hover:text-primary transition-colors">
+            {t('nav.bestsellers')}
+          </Link>
+          <Link href="/shop?sort=newest" className="text-dark hover:text-primary transition-colors">
+            {locale === 'ar' ? 'وصلنا حديثاً' : 'New Arrivals'}
+          </Link>
+          <Link href="/shop?tag=Egyptian" className="text-dark hover:text-primary transition-colors font-bold text-accent">
+            {locale === 'ar' ? 'المفضلة المصرية' : 'Egyptian Favorites 🇪🇬'}
+          </Link>
         </div>
       </div>
 
       <ZipModal isOpen={isZipOpen} onClose={() => setIsZipOpen(false)} />
+
+      {/* 5. MOBILE DRAWER SIDEBAR NAVIGATION OVERLAY */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 flex lg:hidden fade-in">
+          {/* Backdrop overlay */}
+          <div 
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="absolute inset-0 bg-black/50 backdrop-blur-xs"
+          />
+
+          <aside className="relative flex flex-col w-72 bg-white text-dark z-10 animate-fadeIn h-full overflow-hidden shadow-2xl">
+            <div className="p-4 border-b border-light-border flex items-center justify-between bg-[#FAF7F0]">
+              <Logo />
+              <button 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-dark hover:text-primary min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Mobile Drawer Menu Links */}
+            <nav className="flex-1 p-4 space-y-4 overflow-y-auto no-scrollbar">
+              <div className="space-y-1.5">
+                <span className="block px-2 text-[9px] font-bold text-gray-400 uppercase tracking-wider select-none font-cairo">
+                  {locale === 'ar' ? 'الصفحات الرئيسية' : 'Main Pages'}
+                </span>
+                <div className="flex flex-col gap-0.5">
+                  <Link
+                    href="/"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-bold text-dark hover:bg-[#FAF7F0] transition-all min-h-[44px]"
+                  >
+                    <Home className="w-4.5 h-4.5 text-gold shrink-0" />
+                    <span>{t('nav.home')}</span>
+                  </Link>
+                  <Link
+                    href="/shop"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-bold text-dark hover:bg-[#FAF7F0] transition-all min-h-[44px]"
+                  >
+                    <Search className="w-4.5 h-4.5 text-gold shrink-0" />
+                    <span>{t('nav.shop')}</span>
+                  </Link>
+                  <Link
+                    href="/shop?filter=bestseller"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-bold text-dark hover:bg-[#FAF7F0] transition-all min-h-[44px]"
+                  >
+                    <TrendingUp className="w-4.5 h-4.5 text-gold shrink-0" />
+                    <span>{t('nav.bestsellers')}</span>
+                  </Link>
+                  <Link
+                    href="/shop?tag=Egyptian"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-bold text-accent hover:bg-[#FAF7F0] transition-all min-h-[44px]"
+                  >
+                    <span className="w-4.5 text-center text-sm">🇪🇬</span>
+                    <span>{locale === 'ar' ? 'المفضلة المصرية' : 'Egyptian Favorites'}</span>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Categories list in Mobile drawer */}
+              <div className="space-y-1.5 pt-4 border-t border-light-border/60">
+                <span className="block px-2 text-[9px] font-bold text-gray-400 uppercase tracking-wider select-none font-cairo">
+                  {locale === 'ar' ? 'تسوق بالأقسام' : 'Shop Categories'}
+                </span>
+                <div className="flex flex-col gap-0.5">
+                  {categoriesList.map((cat) => (
+                    <Link
+                      key={cat.slug}
+                      href={`/category/${cat.slug}`}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="block px-3 py-3 rounded-lg text-xs font-bold text-dark hover:bg-[#FAF7F0] transition-all min-h-[44px]"
+                    >
+                      {locale === 'ar' ? cat.arabicName : cat.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {/* Extras */}
+              <div className="space-y-1.5 pt-4 border-t border-light-border/60">
+                <div className="flex flex-col gap-0.5">
+                  <Link
+                    href="/track-order"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-3 py-3 rounded-lg text-xs font-bold text-gray-600 hover:bg-[#FAF7F0] min-h-[44px]"
+                  >
+                    <span>{locale === 'ar' ? 'تتبع شحنتك' : 'Track Your Shipment'}</span>
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setIsZipOpen(true);
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-xs font-bold text-gray-600 hover:bg-[#FAF7F0] text-left rtl:text-right min-h-[44px]"
+                  >
+                    <span>{locale === 'ar' ? 'تغيير الرمز البريدي' : 'Change Zip Code'}</span>
+                  </button>
+                </div>
+              </div>
+            </nav>
+
+            {/* Mobile Drawer Logout/Login */}
+            <div className="p-4 border-t border-light-border bg-[#FAF7F0] space-y-2">
+              {isAuthenticated ? (
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    logout();
+                    router.push('/');
+                  }}
+                  className="w-full py-3 bg-red-50 hover:bg-red-100 text-red-650 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 min-h-[44px]"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>{locale === 'ar' ? 'تسجيل الخروج' : 'Logout'}</span>
+                </button>
+              ) : (
+                <Link
+                  href="/account"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full py-3 bg-primary hover:bg-primary-light text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 min-h-[44px]"
+                >
+                  <User className="w-4 h-4 text-gold" />
+                  <span>{locale === 'ar' ? 'تسجيل الدخول' : 'Login / Register'}</span>
+                </Link>
+              )}
+            </div>
+          </aside>
+        </div>
+      )}
     </header>
   );
 }

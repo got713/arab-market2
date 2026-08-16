@@ -5,436 +5,468 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Product } from '@/types';
 import { ProductService } from '@/services/products';
-import { categories } from '@/data/categories';
 import { useLocaleStore } from '@/store/locale-store';
+import { useCartStore } from '@/store/cart-store';
+import { useAuthStore } from '@/store/auth-store';
 import ProductCard from '@/components/products/product-card';
 import { 
-  ShoppingBag, 
+  ArrowRight, 
+  Search, 
+  Star, 
+  Sparkles, 
   Truck, 
-  HeartHandshake, 
   ShieldCheck, 
-  ArrowRight,
-  Sparkles,
-  Snowflake,
-  Cookie,
-  Coffee,
-  Flame,
-  Home,
-  ChevronRight
+  ShoppingBag, 
+  CheckCircle,
+  ThumbsUp,
+  Clock,
+  Layers,
+  Heart,
+  Plus
 } from 'lucide-react';
-
-// Map icon names to Lucide icons
-const iconMap: Record<string, React.ComponentType<any>> = {
-  ShoppingBag,
-  Snowflake,
-  Coffee,
-  Cookie,
-  Flame,
-  Home
-};
 
 export default function HomePage() {
   const router = useRouter();
-  const { t, locale } = useLocaleStore();
+  const { locale, t } = useLocaleStore();
+  const isAr = locale === 'ar';
+  
   const [bestSellers, setBestSellers] = useState<Product[]>([]);
-  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
-  const [newArrivals, setNewArrivals] = useState<Product[]>([]);
-  const [homeSearchQuery, setHomeSearchQuery] = useState('');
+  const [egyptianFavorites, setEgyptianFavorites] = useState<Product[]>([]);
+  const [buyAgainProducts, setBuyAgainProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [homeSearchQuery, setHomeSearchQuery] = useState('');
+
+  const { isAuthenticated, user } = useAuthStore();
+  const { getSubtotal } = useCartStore();
 
   useEffect(() => {
-    const loadProducts = async () => {
+    const loadHomeData = async () => {
+      setLoading(true);
       try {
-        const bs = await ProductService.getBestSellers();
-        const fp = await ProductService.getFeaturedProducts();
-        const all = await ProductService.getProducts();
+        const allProds = await ProductService.getProducts(true);
         
-        setBestSellers(bs.slice(0, 8)); // Show up to 8 best sellers
-        setFeaturedProducts(fp.slice(0, 4)); // Show 4 weekly deals
-        setNewArrivals(all.slice(all.length - 4)); // Show 4 newest arrivals
+        // 1. Best Sellers: Products marked as bestSeller
+        setBestSellers(allProds.filter((p) => p.bestSeller).slice(0, 6));
+
+        // 2. Egyptian Favorites: Tagged or Origin as Egypt
+        setEgyptianFavorites(
+          allProds.filter((p) => p.tags?.includes('Egyptian') || p.country?.toLowerCase() === 'egypt').slice(0, 6)
+        );
+
+        // 3. Buy Again: Simulating prior orders loading
+        if (isAuthenticated) {
+          setBuyAgainProducts(allProds.slice(2, 6));
+        }
       } catch (err) {
-        console.error('Error loading products', err);
+        console.error('Failed to load homepage data:', err);
       } finally {
         setLoading(false);
       }
     };
-    loadProducts();
-  }, []);
+    loadHomeData();
+  }, [isAuthenticated]);
 
-  const handleHomeSearchSubmit = (e: React.FormEvent) => {
+  const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (homeSearchQuery.trim()) {
-      router.push(`/shop?search=${encodeURIComponent(homeSearchQuery.trim())}`);
+      router.push(`/search?q=${encodeURIComponent(homeSearchQuery.trim())}`);
     }
   };
 
-  return (
-    <div className="fade-in">
-      {/* 1. Hero Section */}
-      <section className="relative bg-primary overflow-hidden py-16 lg:py-24">
-        {/* Background Gradients & Accents */}
-        <div className="absolute inset-0 bg-gradient-to-r from-primary-dark/90 to-primary/60 z-10" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img 
-          src="https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1600&auto=format&fit=crop" 
-          alt="Middle Eastern Groceries" 
-          className="absolute inset-0 w-full h-full object-cover opacity-30"
-        />
-        
-        {/* Decorative Gold Elements */}
-        <div className="absolute right-0 top-0 w-96 h-96 bg-gold/10 rounded-full filter blur-3xl" />
-        <div className="absolute left-1/4 bottom-0 w-80 h-80 bg-gold/5 rounded-full filter blur-2xl" />
+  // Helper Skeleton component
+  const Skeleton = () => (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-5 animate-pulse">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="space-y-3 bg-[#FAF7F0]/60 p-4 rounded-xl border border-light-border/40">
+          <div className="bg-gray-200 aspect-square w-full rounded-lg" />
+          <div className="h-4 bg-gray-200 rounded w-3/4" />
+          <div className="h-3 bg-gray-200 rounded w-1/2" />
+          <div className="h-4 bg-gray-200 rounded w-1/4" />
+        </div>
+      ))}
+    </div>
+  );
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-20 text-cream">
-          <div className="max-w-2xl space-y-6">
-            <div className="inline-flex items-center gap-2 bg-gold/20 border border-gold/45 px-3.5 py-1.5 rounded-full text-xs font-semibold text-gold tracking-wide uppercase">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>{locale === 'ar' ? 'التوصيل متوفر في جميع أنحاء الولايات المتحدة' : 'Delivery available across the USA'}</span>
+  return (
+    <div className="fade-in bg-white min-h-screen text-dark" dir={isAr ? 'rtl' : 'ltr'}>
+
+      {/* 1. HERO SECTION */}
+      <section className="relative bg-[#FAF7F0] border-b border-light-border/60 py-12 md:py-20 overflow-hidden">
+        {/* Subtle background Egyptian patterns */}
+        <div
+          className="absolute inset-0 opacity-[0.02]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cpath d='M30 0L0 30l30 30 30-30z' fill='%23B85C38'/%3E%3C/svg%3E")`,
+            backgroundSize: '40px 40px',
+          }}
+        />
+
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-2 items-center gap-8 md:gap-12">
+          <div className="space-y-6 text-center md:text-left rtl:md:text-right">
+            <div className="inline-flex items-center gap-2 bg-primary/5 border border-primary/10 px-3.5 py-1 rounded-full">
+              <span className="w-1.5 h-1.5 bg-gold rounded-full animate-pulse" />
+              <span className="text-primary font-bold text-[10px] sm:text-xs tracking-wider font-cairo">
+                {isAr ? 'توصيل موثوق لكافة الولايات الأمريكية' : 'RELIABLE DELIVERY ACROSS THE USA'}
+              </span>
             </div>
-            
-            <h1 className="text-3xl sm:text-5xl font-bold leading-tight font-sans tracking-tight">
-              {t('hero.title')}
+
+            <h1 className="text-3xl sm:text-5xl font-black text-primary leading-tight font-cairo">
+              {isAr ? (
+                <>
+                  البقالة الشرق أوسطية المفضلة لديك،<br />
+                  <span className="text-gold">تصلك حتى باب منزلك في أمريكا</span>
+                </>
+              ) : (
+                <>
+                  Your Favorite Middle Eastern Groceries,<br />
+                  <span className="text-gold">Delivered Across the USA.</span>
+                </>
+              )}
             </h1>
-            
-            <p className="text-sm sm:text-lg text-cream/80 leading-relaxed font-sans font-light">
-              {t('hero.subtitle')}
+
+            <p className="text-muted-text text-sm sm:text-base leading-relaxed max-w-md mx-auto md:mx-0 font-medium">
+              {isAr
+                ? 'تسوق البقالة اليومية، المفضلة المصرية، الحلويات، التوابل، الأغذية المجمدة والمزيد بأسعار ممتازة وتجربة تسوق مريحة.'
+                : 'Shop everyday groceries, Egyptian favorites, sweets, spices, frozen foods and more. Premium quality with a simple shopping experience.'}
             </p>
 
-            <div className="pt-4 flex flex-wrap gap-4">
-              <Link
-                href="/shop"
-                className="px-8 py-3.5 bg-gold hover:bg-gold-light text-dark font-bold rounded-lg shadow-lg hover:shadow-xl transition-all duration-150 flex items-center gap-2"
-              >
-                <span>{t('hero.cta_shop')}</span>
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3.5 pt-2">
+              <Link href="/shop" className="px-6 py-3 bg-primary hover:bg-primary-light text-white text-xs sm:text-sm font-bold rounded-xl transition-all shadow-md flex items-center gap-2">
+                <span>{isAr ? 'تسوق الآن' : 'Shop Now'}</span>
                 <ArrowRight className="w-4 h-4 rtl:rotate-180" />
               </Link>
-              <a
-                href="#categories-section"
-                className="px-8 py-3.5 bg-white/10 hover:bg-white/20 border border-white/20 text-cream font-bold rounded-lg transition-all duration-150"
-              >
-                {t('hero.cta_categories')}
-              </a>
+              <Link href="#categories-section" className="px-6 py-3 border border-light-border bg-white hover:bg-[#FAF7F0] text-dark text-xs sm:text-sm font-bold rounded-xl transition-all">
+                {isAr ? 'تصفح الأقسام' : 'Browse Categories'}
+              </Link>
+            </div>
+          </div>
+
+          <div className="relative mx-auto max-w-md md:max-w-none flex justify-center w-full">
+            <div className="w-full aspect-[4/3] rounded-2xl bg-white border border-light-border/80 shadow-lg overflow-hidden flex items-center justify-center relative p-1.5 bg-[#FAF7F0]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img 
+                src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800" 
+                alt="Middle Eastern Supermarket" 
+                className="w-full h-full object-cover rounded-xl"
+              />
+              <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-xs border border-light-border/60 p-3.5 rounded-xl flex items-center justify-between gap-4 shadow-sm">
+                <div>
+                  <span className="block text-[10px] text-muted-text font-bold uppercase tracking-wider">Cairo Selection</span>
+                  <strong className="block text-xs text-primary font-bold mt-0.5">{isAr ? 'توابل ومأكولات شرقية ممتازة' : 'Premium Eastern Spices & Food'}</strong>
+                </div>
+                <span className="text-xs font-black text-gold font-mono">$4.99+</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 2. Prominent Search Section */}
-      <section className="-mt-8 max-w-4xl mx-auto px-4 z-30 relative">
-        <form onSubmit={handleHomeSearchSubmit} className="bg-white p-2 rounded-2xl shadow-xl border border-light-border flex items-center gap-2">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              placeholder={locale === 'ar' ? 'ما الذي تبحث عنه اليوم؟...' : 'Search groceries...'}
-              value={homeSearchQuery}
-              onChange={(e) => setHomeSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-xl focus:outline-none focus:ring-0 text-sm sm:text-base text-dark placeholder-gray-400 font-medium rtl:pr-10 rtl:pl-4"
-            />
-            <ShoppingBag className="absolute left-3.5 top-3.5 w-5 h-5 text-gold rtl:right-3.5 rtl:left-auto" />
-          </div>
+      {/* 2. PROMINENT SEARCH INPUT SECTION */}
+      <section className="max-w-3xl mx-auto px-4 -mt-6 z-35 relative">
+        <form
+          onSubmit={handleSearch}
+          className="bg-white rounded-2xl shadow-lg border border-light-border flex items-center gap-2 p-1.5"
+        >
+          <Search className="w-5 h-5 text-gold shrink-0 mx-2.5" />
+          <input
+            type="text"
+            placeholder={isAr ? 'ما الذي تبحث عنه اليوم؟ ابحث عن بقالة، شاي، توابل...' : 'What are you looking for today? Search groceries, tea, spices...'}
+            value={homeSearchQuery}
+            onChange={(e) => setHomeSearchQuery(e.target.value)}
+            className="flex-1 py-3 text-sm text-dark placeholder-muted-text focus:outline-none bg-transparent font-cairo font-semibold"
+          />
           <button
             type="submit"
-            className="bg-primary hover:bg-primary-dark text-cream px-6 sm:px-8 py-3 rounded-xl font-bold text-sm sm:text-base transition-colors shadow-md"
+            className="bg-primary hover:bg-primary-light text-white text-xs px-5 py-3 rounded-xl shrink-0 font-bold font-cairo transition-colors"
           >
-            {locale === 'ar' ? 'بحث' : 'Search'}
+            {isAr ? 'بحث' : 'Search'}
           </button>
         </form>
       </section>
 
-      {/* 3. Shop by Category */}
-      <section id="categories-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 mb-8">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-dark flex items-center gap-2">
-              <span className="w-1 h-5 rounded-full bg-gold" />
-              <span>{locale === 'ar' ? 'تسوق حسب الأقسام' : 'Shop by Category'}</span>
-            </h2>
-            <p className="text-xs text-muted-text mt-1">
-              {locale === 'ar' ? 'تصفح أقسام السوبر ماركت الرئيسية للمنتجات الشرق أوسطية' : 'Browse our primary grocery and supermarket categories'}
-            </p>
-          </div>
-          <Link
-            href="/shop"
-            className="text-xs text-primary font-bold hover:underline flex items-center gap-1"
-          >
-            <span>{locale === 'ar' ? 'عرض كل الأقسام ←' : 'View All Categories →'}</span>
-          </Link>
+      {/* 3. SHOP BY CATEGORY */}
+      <section id="categories-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="text-center space-y-2 mb-10">
+          <h2 className="text-2xl sm:text-3xl font-black text-primary uppercase tracking-wide font-cairo">
+            {isAr ? 'تسوق حسب القسم' : 'Shop by Category'}
+          </h2>
+          <p className="text-xs sm:text-sm text-muted-text font-medium">
+            {isAr ? 'تصفح أقسام السوبرماركت المميزة لشراء احتياجاتك اليومية' : 'Browse our premium supermarket sections to stock your pantry'}
+          </p>
         </div>
 
-        {/* Scrollable list on mobile, grid on desktop */}
-        <div className="flex overflow-x-auto gap-4 pb-3 sm:pb-0 sm:grid sm:grid-cols-3 lg:grid-cols-6 no-scrollbar snap-x">
-          {categories.map((cat) => {
-            const IconComponent = iconMap[cat.iconName] || ShoppingBag;
-            return (
-              <Link
-                key={cat.slug}
-                href={`/category/${cat.slug}`}
-                className="snap-start flex-shrink-0 w-36 sm:w-auto bg-white border border-light-border rounded-xl p-4 text-center hover:border-gold hover:shadow-sm transition-all flex flex-col items-center justify-between min-h-[140px]"
-              >
-                <div className="w-11 h-11 rounded-full bg-cream border border-gold/15 flex items-center justify-center text-primary mb-3">
-                  <IconComponent className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-xs sm:text-sm text-dark line-clamp-1">
-                    {locale === 'ar' ? cat.arabicName : cat.name}
-                  </h3>
-                </div>
-                <span className="text-[10px] text-primary font-bold hover:text-gold mt-2">
-                  {locale === 'ar' ? 'تسوق الآن' : 'Shop Now'}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* 4. Best Sellers Section */}
-      <section className="bg-cream/15 border-y border-light-border py-14">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-end mb-8">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-dark flex items-center gap-2">
-                <span className="w-1 h-5 rounded-full bg-primary" />
-                <span>{locale === 'ar' ? 'المنتجات الأكثر مبيعاً' : 'Best Sellers'}</span>
-              </h2>
-              <p className="text-xs text-muted-text mt-1">
-                {locale === 'ar' ? 'المنتجات المفضلة والأكثر طلباً في الولايات المتحدة' : 'Top requested Middle Eastern grocery items across America'}
-              </p>
-            </div>
-            <Link
-              href="/shop?filter=bestseller"
-              className="text-primary hover:text-gold font-bold text-xs sm:text-sm flex items-center gap-1 transition-colors"
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+          {[
+            { id: 'groceries',       en: 'Groceries',       ar: 'بقالة عامة',       descEn: 'Pantry essentials', descAr: 'أساسيات المطبخ', img: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&q=80&w=300' },
+            { id: 'frozen',          en: 'Frozen Foods',    ar: 'مجمدات',           descEn: 'Vegetables & meals', descAr: 'خضار ووجبات',   img: 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&q=80&w=300' },
+            { id: 'drinks',          en: 'Drinks',          ar: 'مشروبات',         descEn: 'Tea, coffee & juices', descAr: 'شاي، قهوة وعصائر', img: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&q=80&w=300' },
+            { id: 'sweets-snacks',   en: 'Sweets & Snacks', ar: 'حلويات ومقرمشات',   descEn: 'Baklava & snacks',  descAr: 'بقلاوة ومسليات',  img: 'https://images.unsplash.com/photo-1505976378723-9726af547a02?auto=format&fit=crop&q=80&w=300' },
+            { id: 'spices-sauces',   en: 'Spices & Sauces', ar: 'توابل وصلصات',     descEn: 'Herbs & oils',      descAr: 'أعشاب وزيوت',    img: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&q=80&w=300' },
+            { id: 'household',       en: 'Household',       ar: 'مستلزمات منزلية',   descEn: 'Cleaning & kitchen', descAr: 'منظفات ومطبخ',   img: 'https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&q=80&w=300' },
+          ].map((cat) => (
+            <Link 
+              key={cat.id} 
+              href={`/category/${cat.id}`}
+              className="group bg-white border border-light-border hover:border-gold rounded-2xl p-3 flex flex-col items-center text-center transition-all hover:shadow-md bg-white hover:-translate-y-1"
             >
-              <span>{locale === 'ar' ? 'عرض الكل' : 'View All'}</span>
-              <ArrowRight className="w-4 h-4 rtl:rotate-180" />
+              <div className="w-20 h-20 rounded-full overflow-hidden border border-light-border bg-[#FAF7F0]/40 flex items-center justify-center shrink-0 mb-3.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={cat.img} alt={cat.en} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+              </div>
+              <strong className="block text-sm text-primary font-bold group-hover:text-gold transition-colors font-cairo">
+                {isAr ? cat.ar : cat.en}
+              </strong>
+              <span className="block text-[10px] text-muted-text font-medium mt-1 leading-normal">
+                {isAr ? cat.descAr : cat.descEn}
+              </span>
+              <span className="text-[10px] font-bold text-primary group-hover:text-gold mt-3 inline-flex items-center gap-0.5 border-b border-transparent group-hover:border-gold">
+                {isAr ? 'تسوق القسم' : 'Shop Now'}
+              </span>
             </Link>
-          </div>
-
-          {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="animate-pulse bg-white border border-light-border rounded-xl h-80" />
-              ))}
-            </div>
-          ) : bestSellers.length > 0 ? (
-            <div className="flex overflow-x-auto gap-4 pb-3 sm:pb-0 sm:grid sm:grid-cols-2 md:grid-cols-4 no-scrollbar snap-x">
-              {bestSellers.map((product) => (
-                <div key={product.id} className="snap-start flex-shrink-0 w-64 sm:w-auto">
-                  <ProductCard product={product} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-center text-gray-500 py-10">{t('shop.no_products')}</p>
-          )}
+          ))}
         </div>
       </section>
 
-      {/* 5. Weekly Deals Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-        <div className="flex justify-between items-end mb-8">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-dark flex items-center gap-2">
-              <span className="w-1 h-5 rounded-full bg-gold" />
-              <span>{locale === 'ar' ? 'عروض الأسبوع' : 'Weekly Deals'}</span>
+      {/* 4. SHOP BY NEED */}
+      <section className="bg-[#FAF7F0] border-y border-light-border/60 py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center space-y-2 mb-10">
+            <h2 className="text-2xl sm:text-3xl font-black text-primary font-cairo">
+              {isAr ? 'ما الذي تبحث عنه؟' : 'What are you shopping for?'}
             </h2>
-            <p className="text-xs text-muted-text mt-1">
-              {locale === 'ar' ? 'خصومات تصل إلى 20% على منتجات مختارة هذا الأسبوع' : 'Save up to 20% on these select weekly favorites'}
+            <p className="text-xs sm:text-sm text-muted-text font-medium">
+              {isAr ? 'اختصارات سريعة للوصول إلى المنتجات الأكثر طلباً' : 'Quick shortcuts to access our most requested products'}
             </p>
           </div>
-          <Link
-            href="/shop?filter=deals"
-            className="text-primary hover:text-gold font-bold text-xs sm:text-sm flex items-center gap-1 transition-colors"
-          >
-            <span>{locale === 'ar' ? 'عرض الكل' : 'View All'}</span>
-            <ArrowRight className="w-4 h-4 rtl:rotate-180" />
-          </Link>
-        </div>
 
-        {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="animate-pulse bg-white border border-light-border rounded-xl h-80" />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {[
+              { labelEn: 'Everyday Groceries', labelAr: 'بقالة يومية',      link: '/shop?category=groceries' },
+              { labelEn: 'Egyptian Favorites', labelAr: 'المفضلة المصرية',  link: '/shop?tag=Egyptian' },
+              { labelEn: 'Coffee & Tea',       labelAr: 'قهوة وشاي',        link: '/shop?category=drinks' },
+              { labelEn: 'Frozen Foods',       labelAr: 'مجمدات المطبخ',    link: '/shop?category=frozen' },
+              { labelEn: 'Sweets & Snacks',    labelAr: 'مسليات ومقرمشات', link: '/shop?category=sweets-snacks' },
+              { labelEn: 'Spices & Sauces',    labelAr: 'توابل المطبخ',      link: '/shop?category=spices-sauces' },
+            ].map((item, idx) => (
+              <Link
+                key={idx}
+                href={item.link}
+                className="bg-white border border-light-border/80 hover:border-gold hover:bg-white rounded-xl p-4 text-center transition-all hover:shadow-sm flex items-center justify-center min-h-[64px]"
+              >
+                <strong className="text-xs text-primary font-bold font-cairo leading-tight">
+                  {isAr ? item.labelAr : item.labelEn}
+                </strong>
+              </Link>
             ))}
           </div>
-        ) : featuredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-            {featuredProducts.map((product) => {
-              const originalPrice = product.purchaseOptions.single.price;
-              const discountedPrice = parseFloat((originalPrice * 0.8).toFixed(2));
-              const dealProduct = {
-                ...product,
-                purchaseOptions: {
-                  ...product.purchaseOptions,
-                  single: { ...product.purchaseOptions.single, price: discountedPrice }
-                },
-                oldPrice: originalPrice
-              };
-              return (
-                <div key={product.id} className="relative group">
-                  <div className="absolute top-3 left-3 bg-red-650 text-white font-extrabold text-[10px] uppercase tracking-wide px-2 py-0.5 rounded z-20 shadow-md">
-                    20% OFF
-                  </div>
-                  <ProductCard product={dealProduct as any} />
-                </div>
-              );
-            })}
+        </div>
+      </section>
+
+      {/* 5. BEST SELLERS */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="flex items-end justify-between mb-8 border-b border-light-border/60 pb-4">
+          <div className="space-y-1">
+            <h2 className="text-xl sm:text-2xl font-black text-primary uppercase tracking-wide font-cairo">
+              {isAr ? 'الأكثر مبيعاً' : 'Best Sellers'}
+            </h2>
+            <p className="text-xs text-muted-text font-medium">
+              {isAr ? 'المنتجات الأكثر مبيعاً وتقييماً من قبل عائلاتنا' : 'Top selling products loved by our community'}
+            </p>
+          </div>
+          <Link href="/shop?filter=bestseller" className="text-xs font-bold text-primary hover:text-gold flex items-center gap-0.5">
+            <span>{isAr ? 'عرض الكل' : 'View All'}</span>
+            <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
+          </Link>
+        </div>
+
+        {loading ? <Skeleton /> : bestSellers.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5">
+            {bestSellers.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
           </div>
         ) : (
-          <p className="text-center text-gray-500 py-10">{t('shop.no_products')}</p>
+          <p className="text-center text-muted-text py-10 font-cairo">{t('shop.no_products')}</p>
         )}
       </section>
 
-      {/* 6. New Arrivals Section */}
-      <section className="bg-cream/15 border-t border-light-border py-14">
+      {/* 6. EGYPTIAN FAVORITES */}
+      <section id="egyptian-favorites" className="bg-[#FAF7F0] border-y border-light-border/60 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-end mb-8">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-dark flex items-center gap-2">
-                <span className="w-1 h-5 rounded-full bg-primary" />
-                <span>{locale === 'ar' ? 'وصل حديثاً' : 'New Arrivals'}</span>
+          
+          <div className="flex items-end justify-between mb-8 border-b border-light-border/60 pb-4">
+            <div className="space-y-1">
+              <h2 className="text-xl sm:text-2xl font-black text-primary font-cairo flex items-center gap-1.5">
+                <span>{isAr ? 'المفضلة المصرية 🇪🇬' : 'Egyptian Favorites 🇪🇬'}</span>
               </h2>
-              <p className="text-xs text-muted-text mt-1">
-                {locale === 'ar' ? 'أحدث الإضافات لمنتجات البقالة هذا الأسبوع' : 'Fresh additions to our Middle Eastern catalog'}
+              <p className="text-xs text-muted-text font-medium">
+                {isAr ? 'المنتجات المصرية الأكثر شعبية وطلباً في أمريكا' : 'Popular products from Egypt, loved by our community.'}
               </p>
             </div>
-            <Link
-              href="/shop?sort=newest"
-              className="text-primary hover:text-gold font-bold text-xs sm:text-sm flex items-center gap-1 transition-colors"
-            >
-              <span>{locale === 'ar' ? 'عرض الكل' : 'View All'}</span>
-              <ArrowRight className="w-4 h-4 rtl:rotate-180" />
+            <Link href="/shop?tag=Egyptian" className="text-xs font-bold text-primary hover:text-gold flex items-center gap-0.5">
+              <span>{isAr ? 'كل المنتجات المصرية' : 'Explore Egyptian Products'}</span>
+              <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
             </Link>
           </div>
 
-          {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="animate-pulse bg-white border border-light-border rounded-xl h-80" />
-              ))}
-            </div>
-          ) : newArrivals.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-              {newArrivals.map((product) => (
+          {loading ? <Skeleton /> : egyptianFavorites.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5">
+              {egyptianFavorites.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
           ) : (
-            <p className="text-center text-gray-500 py-10">{t('shop.no_products')}</p>
+            <p className="text-center text-muted-text py-10 font-cairo">{isAr ? 'لا توجد منتجات مصرية متوفرة حالياً' : 'No Egyptian products found.'}</p>
           )}
         </div>
       </section>
 
-      {/* 7. Delivery / Shipping Information */}
-      <section className="bg-primary text-cream py-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="space-y-1.5 text-center md:text-left rtl:md:text-right">
-            <h3 className="text-lg sm:text-xl font-bold text-gold">
-              {locale === 'ar' ? 'تسوق إلكترونياً واحصل على طلباتك حتى باب المنزل.' : 'Shop online and get your groceries delivered.'}
-            </h3>
-            <p className="text-xs text-cream/70 font-medium">
-              {locale === 'ar' ? 'شحن عادي بقيمة 7.99$ | شحن سريع بقيمة 14.99$' : 'Standard Delivery $7.99 | Express Delivery $14.99'}
-            </p>
-          </div>
-          <Link
-            href="/shipping"
-            className="px-6 py-2.5 bg-gold hover:bg-gold-light text-dark font-bold text-xs rounded-lg transition-colors shadow-md"
-          >
-            {locale === 'ar' ? 'تفاصيل الشحن والتوصيل' : 'View Shipping Policy'}
-          </Link>
-        </div>
-      </section>
-
-      {/* 8. Why Arab Market */}
+      {/* 7. HOMEPAGE PROMOTIONAL SECTIONS (3 Banners) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h2 className="text-xl sm:text-2xl font-bold text-dark text-center mb-10">
-          {locale === 'ar' ? 'لماذا تتسوق من عرب ماركت؟' : 'Why Shop at Arab Market?'}
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          <div className="bg-white border border-light-border rounded-xl p-5 text-center space-y-2">
-            <div className="w-10 h-10 rounded-full bg-cream mx-auto flex items-center justify-center text-primary">
-              <ShoppingBag className="w-5 h-5 text-gold" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Banner 1: Egyptian Favorites */}
+          <div className="bg-white border border-light-border rounded-2xl p-6 flex flex-col justify-between shadow-xs h-64 relative overflow-hidden group">
+            <div className="absolute inset-0 opacity-[0.03] bg-primary rounded-2xl" />
+            <div className="space-y-3 z-10 relative">
+              <span className="text-[10px] font-bold text-gold uppercase tracking-wider">Curated Collection</span>
+              <h3 className="text-lg font-bold text-primary font-cairo">{isAr ? 'المفضلة المصرية' : 'Egyptian Favorites'}</h3>
+              <p className="text-xs text-muted-text font-medium max-w-[200px]">
+                {isAr ? 'المنتجات المصرية الأكثر شعبية في مكان واحد.' : 'Popular Egyptian products in one place.'}
+              </p>
             </div>
-            <h3 className="font-bold text-sm text-dark">{locale === 'ar' ? 'تشكيلة واسعة' : 'Wide Selection'}</h3>
-            <p className="text-xs text-muted-text">{locale === 'ar' ? 'جميع المواد الغذائية الشرق أوسطية في مكان واحد.' : 'Your favorite Middle Eastern grocer brands delivered together.'}</p>
-          </div>
-          
-          <div className="bg-white border border-light-border rounded-xl p-5 text-center space-y-2">
-            <div className="w-10 h-10 rounded-full bg-cream mx-auto flex items-center justify-center text-primary">
-              <ShieldCheck className="w-5 h-5 text-gold" />
+            <div className="z-10 relative pt-4">
+              <Link href="/shop?tag=Egyptian" className="px-4 py-2.5 bg-primary hover:bg-primary-light text-white text-xs font-bold rounded-lg transition-colors inline-block">
+                {isAr ? 'تسوق المنتجات المصرية' : 'Shop Egyptian Favorites'}
+              </Link>
             </div>
-            <h3 className="font-bold text-sm text-dark">{locale === 'ar' ? 'منتجات حلال منتقاة' : 'Halal Selection'}</h3>
-            <p className="text-xs text-muted-text">{locale === 'ar' ? 'منتجات مطابقة للشريعة الإسلامية ومصادر موثوقة.' : 'Carefully selected products conforming to halal standards.'}</p>
           </div>
 
-          <div className="bg-white border border-light-border rounded-xl p-5 text-center space-y-2">
-            <div className="w-10 h-10 rounded-full bg-cream mx-auto flex items-center justify-center text-primary">
-              <Truck className="w-5 h-5 text-gold" />
+          {/* Banner 2: Weekly Specials */}
+          <div className="bg-white border border-light-border rounded-2xl p-6 flex flex-col justify-between shadow-xs h-64 relative overflow-hidden group">
+            <div className="absolute inset-0 opacity-[0.03] bg-accent rounded-2xl" />
+            <div className="space-y-3 z-10 relative">
+              <span className="text-[10px] font-bold text-accent uppercase tracking-wider">Weekly Highlights</span>
+              <h3 className="text-lg font-bold text-primary font-cairo">{isAr ? 'مختارات الأسبوع' : 'Weekly Specials'}</h3>
+              <p className="text-xs text-muted-text font-medium max-w-[200px]">
+                {isAr ? 'اكتشف أفضل خيارات المنتجات الأسبوعية المميزة.' : 'Discover this week\'s selected products.'}
+              </p>
             </div>
-            <h3 className="font-bold text-sm text-dark">{locale === 'ar' ? 'شحن لكل أمريكا' : 'USA Delivery'}</h3>
-            <p className="text-xs text-muted-text">{locale === 'ar' ? 'شحن سريع ومباشر لباب منزلك في أي ولاية.' : 'Quick, flat rate shipping directly to your door anywhere in the US.'}</p>
+            <div className="z-10 relative pt-4">
+              <Link href="/shop?filter=featured" className="px-4 py-2.5 bg-primary hover:bg-primary-light text-white text-xs font-bold rounded-lg transition-colors inline-block">
+                {isAr ? 'عرض المختارات' : 'Shop Deals'}
+              </Link>
+            </div>
           </div>
 
-          <div className="bg-white border border-light-border rounded-xl p-5 text-center space-y-2">
-            <div className="w-10 h-10 rounded-full bg-cream mx-auto flex items-center justify-center text-primary">
-              <HeartHandshake className="w-5 h-5 text-gold" />
+          {/* Banner 3: Fast US Delivery */}
+          <div className="bg-white border border-light-border rounded-2xl p-6 flex flex-col justify-between shadow-xs h-64 relative overflow-hidden group">
+            <div className="absolute inset-0 opacity-[0.03] bg-gold rounded-2xl" />
+            <div className="space-y-3 z-10 relative">
+              <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Reliable Shipping</span>
+              <h3 className="text-lg font-bold text-primary font-cairo">{isAr ? 'توصيل سريع في أمريكا' : 'Fast US Delivery'}</h3>
+              <p className="text-xs text-muted-text font-medium max-w-[200px]">
+                {isAr ? 'شحن وتوصيل مريح لكافة الولايات الأمريكية.' : 'Convenient delivery across the USA.'}
+              </p>
             </div>
-            <h3 className="font-bold text-sm text-dark">{locale === 'ar' ? 'تسوق سهل' : 'Easy Shopping'}</h3>
-            <p className="text-xs text-muted-text">{locale === 'ar' ? 'واجهة بسيطة تدعم اللغتين العربية والإنجليزية.' : 'Distraction-free e-commerce optimized for English & Arabic.'}</p>
+            <div className="z-10 relative pt-4">
+              <Link href="/shipping" className="px-4 py-2.5 border border-primary/20 hover:bg-[#FAF7F0] text-primary text-xs font-bold rounded-lg transition-colors inline-block">
+                {isAr ? 'اقرأ المزيد' : 'Learn More'}
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* 9. Customer Reviews */}
-      <section className="bg-cream/15 py-16 border-t border-light-border">
+      {/* 8. TRUST SECTION ("Why Shop at Arab Market?") */}
+      <section className="bg-[#FAF7F0] border-t border-light-border/60 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-xl sm:text-2xl font-bold text-dark text-center mb-10">
-            {locale === 'ar' ? 'ماذا يقول عملاؤنا' : 'What Our Customers Say'}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white border border-light-border rounded-xl p-6 space-y-3">
-              <div className="flex text-gold">★★★★★</div>
-              <p className="text-xs text-muted-text italic">
-                {locale === 'ar' ? '"أفضل موقع لشراء المنتجات العربية في أمريكا. التوصيل سريع والتعليب ممتاز جداً."' : '"Best place to buy Middle Eastern groceries in the US. Super fast shipping and excellent packaging."'}
-              </p>
-              <h4 className="font-bold text-xs text-dark">— Leila A., California</h4>
-            </div>
-
-            <div className="bg-white border border-light-border rounded-xl p-6 space-y-3">
-              <div className="flex text-gold">★★★★★</div>
-              <p className="text-xs text-muted-text italic">
-                {locale === 'ar' ? '"أخيراً سوبر ماركت عربي يسهل الشراء منه باللغة الإنجليزية وتفاصيل واضحة للبراندات."' : '"Finally a Middle Eastern grocery store that makes it easy to shop with English translations and clear brands."'}
-              </p>
-              <h4 className="font-bold text-xs text-dark">— David M., Texas</h4>
-            </div>
-
-            <div className="bg-white border border-light-border rounded-xl p-6 space-y-3">
-              <div className="flex text-gold">★★★★★</div>
-              <p className="text-xs text-[11px] text-muted-text italic">
-                {locale === 'ar' ? '"خيارات شراء المنتجات بالكرتونة أو بالربطة ممتازة جداً وموفرة للعائلات الكبيرة."' : '"The pack and case buying options are amazing and save so much money for larger families."'}
-              </p>
-              <h4 className="font-bold text-xs text-dark">— Tarik K., New York</h4>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 10. Promo banner */}
-      <section className="bg-cream border-t border-light-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="space-y-2 text-center md:text-left rtl:md:text-right">
-            <h3 className="text-xl sm:text-2xl font-bold text-primary">
-              {locale === 'ar' ? 'استخدم كوبون WELCOME10 ووفر 10%' : 'Save 10% on your first order!'}
-            </h3>
-            <p className="text-xs sm:text-sm text-muted-text">
-              {locale === 'ar' ? 'وفر 10% عند الشراء بمبلغ أكبر من 30 دولاراً.' : 'Get 10% off when you spend $30 or more. Enter code WELCOME10 at checkout.'}
+          <div className="text-center space-y-2 mb-12">
+            <h2 className="text-2xl sm:text-3xl font-black text-primary font-cairo">
+              {isAr ? 'لماذا تختار عرب ماركت؟' : 'Why Shop at Arab Market?'}
+            </h2>
+            <p className="text-xs sm:text-sm text-muted-text font-medium">
+              {isAr ? 'نلتزم بتقديم أفضل جودة وأسهل تجربة لعملائنا في الولايات المتحدة' : 'We commit to providing top quality and a seamless shopping experience across the USA'}
             </p>
           </div>
-          <div className="bg-white px-6 py-3.5 border-2 border-dashed border-gold text-primary font-bold text-sm tracking-wider rounded-lg select-all">
-            WELCOME10
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white border border-light-border rounded-2xl p-6 text-center space-y-3.5 shadow-2xs">
+              <div className="w-12 h-12 bg-primary/5 rounded-full flex items-center justify-center text-primary mx-auto">
+                <ShoppingBag className="w-6 h-6 text-gold" />
+              </div>
+              <h3 className="font-bold text-sm text-primary font-cairo">{isAr ? 'تشكيلة منتجات واسعة' : 'Wide Product Selection'}</h3>
+              <p className="text-xs text-muted-text leading-relaxed font-medium">
+                {isAr ? 'نوفر كافة أنواع الأغذية والبقالة الشرق أوسطية والمصرية التي تبحث عنها.' : 'Find all the authentic Middle Eastern and Egyptian food brands you miss.'}
+              </p>
+            </div>
+
+            <div className="bg-white border border-light-border rounded-2xl p-6 text-center space-y-3.5 shadow-2xs">
+              <div className="w-12 h-12 bg-primary/5 rounded-full flex items-center justify-center text-primary mx-auto">
+                <Clock className="w-6 h-6 text-gold" />
+              </div>
+              <h3 className="font-bold text-sm text-primary font-cairo">{isAr ? 'طلب سهل عبر الإنترنت' : 'Easy Online Ordering'}</h3>
+              <p className="text-xs text-muted-text leading-relaxed font-medium">
+                {isAr ? 'واجهة بسيطة وواضحة تتيح لك العثور على المنتجات والشراء بضغطة زر.' : 'Find products instantly, add to your cart, and complete orders with zero hassle.'}
+              </p>
+            </div>
+
+            <div className="bg-white border border-light-border rounded-2xl p-6 text-center space-y-3.5 shadow-2xs">
+              <div className="w-12 h-12 bg-primary/5 rounded-full flex items-center justify-center text-primary mx-auto">
+                <ShieldCheck className="w-6 h-6 text-gold" />
+              </div>
+              <h3 className="font-bold text-sm text-primary font-cairo">{isAr ? 'دفع آمن بالكامل' : 'Secure Checkout'}</h3>
+              <p className="text-xs text-muted-text leading-relaxed font-medium">
+                {isAr ? 'خيارات دفع مشفرة وآمنة لحماية بياناتك الشخصية والمالية.' : '100% encrypted checkout with Stripe and card protection standards.'}
+              </p>
+            </div>
+
+            <div className="bg-white border border-light-border rounded-2xl p-6 text-center space-y-3.5 shadow-2xs">
+              <div className="w-12 h-12 bg-primary/5 rounded-full flex items-center justify-center text-primary mx-auto">
+                <Truck className="w-6 h-6 text-gold" />
+              </div>
+              <h3 className="font-bold text-sm text-primary font-cairo">{isAr ? 'شحن لكافة الولايات' : 'US Delivery'}</h3>
+              <p className="text-xs text-muted-text leading-relaxed font-medium">
+                {isAr ? 'نشحن طلبك مغلفاً بعناية مباشرة لعنوانك في أي ولاية أمريكية.' : 'Directly shipped to your doorstep, anywhere in the United States.'}
+              </p>
+            </div>
           </div>
         </div>
       </section>
+
+      {/* 9. CUSTOMER REVIEWS */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="text-center space-y-2 mb-12">
+          <h2 className="text-2xl sm:text-3xl font-black text-primary font-cairo">
+            {isAr ? 'آراء عملائنا' : 'What Our Customers Say'}
+          </h2>
+          <p className="text-xs sm:text-sm text-muted-text font-medium">
+            {isAr ? 'نفخر بخدمة مجتمعاتنا وتقديم أفضل تجربة بقالة لهم' : 'Proudly serving Middle Eastern families and communities in the USA'}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            { name: 'Amr S., New York', rating: 5, en: '"The best place to buy Egyptian groceries in New York. The Molokhia and Ful are fresh, and shipping is super fast!"', ar: '"أفضل مكان لشراء المنتجات المصرية في نيويورك. الملوخية والفول طازجة للغاية والشحن سريع جداً!"' },
+            { name: 'Mariam H., California', rating: 5, en: '"Simple interface, very easy to buy with case and pack options. Highly recommend to anyone who wants authentic flavors!"', ar: '"واجهة تسوق بسيطة وسريعة للغاية خصوصاً خيارات الربطة والكرتون. أنصح به بشدة لكل من يحب الأطعمة الأصلية!"' },
+            { name: 'Tarek A., Texas', rating: 5, en: '"Customer service is amazing, packaging is excellent. Finally, a reliable Middle Eastern grocery store in America."', ar: '"خدمة عملاء ممتازة وتغليف رائع. أخيرًا متجر منتجات عربية موثوق في أمريكا!"' },
+          ].map((rev, idx) => (
+            <div key={idx} className="bg-white border border-light-border rounded-2xl p-6 space-y-3.5 shadow-2xs">
+              <div className="flex gap-0.5 text-gold text-sm">
+                {Array.from({ length: rev.rating }).map((_, i) => (
+                  <Star key={i} className="w-4 h-4 fill-current" />
+                ))}
+              </div>
+              <p className="text-xs sm:text-sm text-dark font-medium italic leading-relaxed font-cairo">
+                {isAr ? rev.ar : rev.en}
+              </p>
+              <strong className="block text-[11px] font-bold text-gold uppercase tracking-wider">— {rev.name}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Spacer for mobile bottom nav */}
+      <div className="h-16 md:hidden" />
     </div>
   );
 }

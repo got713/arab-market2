@@ -8,15 +8,21 @@ export default function LocaleProvider({ children }: { children: React.ReactNode
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const timer = setTimeout(() => {
+      setMounted(true);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     const dir = locale === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.dir = dir;
     document.documentElement.lang = locale;
   }, [locale]);
 
-  // Prevent flash of unstyled content during hydration
+  // Prevent flash of unstyled content during hydration and avoid rendering translated child components before mount
   if (!mounted) {
-    return <div className="opacity-0">{children}</div>;
+    return <div className="opacity-0" />;
   }
 
   return <>{children}</>;

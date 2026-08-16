@@ -1,78 +1,202 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #123D2F;
-  --color-primary-dark: #0b261d;
-  --color-gold: #C8A24D;
-  --color-gold-light: #dfc17f;
-  --color-cream: #F8F4EA;
-  --color-dark: #222222;
-  --color-muted-text: #6B7280;
-  --color-light-border: #E5E7EB;
+  /* ── الألوان الرئيسية — هادئة ومميزة ── */
+  --color-primary:      #17324D;   /* كحلي دافئ عميق */
+  --color-primary-dark: #0D2033;   /* أغمق */
+  --color-primary-light:#214366;   /* أفتح للـ hover */
 
-  --font-sans: var(--font-poppins), var(--font-cairo), system-ui, -apple-system, sans-serif;
-  --font-cairo: var(--font-cairo), system-ui, -apple-system, sans-serif;
-  
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
+  --color-gold:         #D9B56D;   /* ذهبي دافئ ثنائي */
+  --color-gold-light:   #E5C991;   /* ذهبي مضيء */
+  --color-gold-soft:    #FAF4E5;   /* ذهبي ناعم للخلفيات */
+
+  --color-cream:        #FAF7F0;   /* كريمي دافئ مصري — خلفية أساسية */
+  --color-cream-dark:   #EFEADF;   /* كريمي أغمق */
+
+  --color-dark:         #1F2933;   /* نص داكن كحلي */
+  --color-muted-text:   #667085;   /* نص ثانوي رمادي هادئ */
+  --color-light-border: #EBE6DA;   /* حدود دافئة متناسقة */
+
+  --color-accent:       #B85C38;   /* تيراكوتا طيني مصري للـ badges والأزرار المساعدة */
+  --color-accent-light: #FBF4F1;
+
+  /* ── الفونت ── */
+  --font-sans:  var(--font-inter), var(--font-cairo), system-ui, sans-serif;
+  --font-cairo: var(--font-cairo), var(--font-inter), system-ui, sans-serif;
+
+  /* ── الحواف ── */
+  --radius-sm:  0.25rem;
+  --radius-md:  0.5rem;
+  --radius-lg:  0.75rem;
+  --radius-xl:  1rem;
   --radius-2xl: 1.5rem;
 }
 
+/* ── متغيرات CSS الأساسية ── */
 :root {
-  --primary: #123D2F;
-  --gold: #C8A24D;
-  --cream: #F8F4EA;
-  --dark: #222222;
-  --muted-text: #6B7280;
-  --light-border: #E5E7EB;
+  --primary:       #17324D;
+  --primary-dark:  #0D2033;
+  --gold:          #D9B56D;
+  --gold-light:    #E5C991;
+  --cream:         #FAF7F0;
+  --dark:          #1F2933;
+  --muted-text:    #667085;
+  --light-border:  #EBE6DA;
+  --accent:        #B85C38;
 }
 
+/* ── الـ body ── */
 body {
+  font-family: var(--font-cairo), sans-serif;
   color: var(--dark);
-  background-color: #ffffff;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  background-color: var(--cream);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-html[lang="ar"] body {
+/* Cairo لكل شيء عربي وإنجليزي */
+html body,
+html[lang="ar"] body,
+html[lang="en"] body {
   font-family: var(--font-cairo), sans-serif;
 }
 
-/* Custom scrollbars for category listing */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
+/* ── Scrollbars مخصصة ── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
-/* Page transitions */
+/* ── انتقالات الصفحات ── */
 .fade-in {
-  animation: fadeIn 0.3s ease-in-out;
+  animation: fadeIn 0.35s ease-out;
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Glassmorphism utility */
-.glass {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+/* ── نمط زخرفي إسلامي كخلفية subtle ── */
+.pattern-bg {
+  background-color: var(--cream);
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23C69C5D' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 
-.glass-dark {
-  background: rgba(18, 61, 47, 0.95);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+/* ── زخرفة خط عربي في الأعلى ── */
+.arabic-border-top {
+  border-top: 3px solid;
+  border-image: linear-gradient(90deg, transparent, var(--gold), transparent) 1;
+}
+
+/* ── iOS safe-area padding ── */
+.pb-safe {
+  padding-bottom: max(0.625rem, env(safe-area-inset-bottom));
+}
+
+/* ── Line clamp ── */
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── بطاقات المنتجات ── */
+.product-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.product-card:hover {
+  transform: translateY(-2px);
+}
+
+/* ── زر إضافة للسلة ── */
+.btn-add {
+  background: var(--primary);
+  color: var(--cream);
+  font-family: var(--font-cairo), sans-serif;
+  font-weight: 700;
+  transition: background 0.15s ease;
+}
+.btn-add:hover {
+  background: var(--primary-dark);
+}
+
+/* ── شريط التنقل العلوي ── */
+.header-link {
+  font-family: var(--font-cairo), sans-serif;
+  font-weight: 600;
+  transition: color 0.15s ease;
+}
+
+/* ── الهيرو ── */
+.hero-headline {
+  font-family: var(--font-cairo), sans-serif;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+/* ── عنوان الأقسام ── */
+.section-title {
+  font-family: var(--font-cairo), sans-serif;
+  font-weight: 700;
+}
+
+/* ── فاصل تزخيفي بالذهبي ── */
+.gold-divider {
+  width: 48px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold), var(--gold-light));
+  border-radius: 2px;
+}
+
+/* ── زر الشراء الرئيسي ── */
+.btn-primary {
+  background: var(--primary);
+  color: var(--cream);
+  font-family: var(--font-cairo), sans-serif;
+  font-weight: 700;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.btn-primary:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(24, 43, 58, 0.2);
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  color: #fff;
+  font-family: var(--font-cairo), sans-serif;
+  font-weight: 700;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(198, 156, 93, 0.2);
+}
+.btn-gold:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(198, 156, 93, 0.3);
 }

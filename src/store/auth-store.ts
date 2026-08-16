@@ -1,66 +1,101 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { ApiClient } from '../lib/api-client';
 
 export interface UserProfile {
   name: string;
   email: string;
   phone: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
 }
 
 interface AuthState {
   user: UserProfile | null;
   isAdmin: boolean;
   isAuthenticated: boolean;
-  loginCustomer: (email: string, name?: string) => void;
-  loginAdmin: () => void;
-  logout: () => void;
-  updateProfile: (profile: Partial<UserProfile>) => void;
+  loginCustomer: (email?: string, name?: string) => Promise<void>;
+  loginAdmin: () => Promise<void>;
+  loginWithCredentials: (email: string, password: string) => Promise<void>;
+  registerCustomer: (name: string, email: string, password: string, passwordConfirmation: string, phone?: string) => Promise<void>;
+  logout: () => Promise<void>;
+  updateProfile: (profile: Partial<UserProfile> & { password?: string; password_confirmation?: string }) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       isAdmin: false,
       isAuthenticated: false,
 
-      loginCustomer: (email, name = 'Ahmed Al-Masri') => {
-        set({
-          user: {
+      loginCustomer: async (email = 'ahmed.masri@gmail.com', name) => {
+        // Automatically login with seeded customer test account
+        await get().loginWithCredentials(email, 'customer123');
+      },
+
+      loginAdmin: async () => {
+        // Automatically login with seeded admin test account
+        await get().loginWithCredentials('admin@arabmarket.com', 'admin123');
+      },
+
+      loginWithCredentials: async (email, password) => {
+        try {
+          const res = await ApiClient.post<any>('/auth/login', { email, password });
+          if (res.access_token) {
+            localStorage.setItem('am_token', res.access_token);
+            const user = res.user;
+            set({
+              user: {
+                name: user.name,
+                email: user.email,
+                phone: user.phone || '',
+              },
+              isAdmin: user.role === 'admin',
+              isAuthenticated: true,
+            });
+          }
+        } catch (err: any) {
+          throw new Error(err.message || 'Authentication failed.');
+        }
+      },
+
+      registerCustomer: async (name, email, password, passwordConfirmation, phone) => {
+        try {
+          const res = await ApiClient.post<any>('/auth/register', {
             name,
             email,
-            phone: '+1 (555) 019-2834',
-            address: '1428 Elm St, Apt 4B',
-            city: 'New York',
-            state: 'NY',
-            zip: '10001',
-          },
-          isAdmin: false,
-          isAuthenticated: true,
-        });
+            password,
+            password_confirmation: passwordConfirmation,
+            phone,
+          });
+          if (res.access_token) {
+            localStorage.setItem('am_token', res.access_token);
+            const user = res.user;
+            set({
+              user: {
+                name: user.name,
+                email: user.email,
+                phone: user.phone || '',
+              },
+              isAdmin: user.role === 'admin',
+              isAuthenticated: true,
+            });
+          }
+        } catch (err: any) {
+          throw new Error(err.message || 'Registration failed.');
+        }
       },
 
-      loginAdmin: () => {
-        set({
-          user: {
-            name: 'Store Administrator',
-            email: 'admin@arabmarket.com',
-            phone: '+1 (800) 555-0100',
-            address: 'Corporate Headquarters',
-            city: 'Chicago',
-            state: 'IL',
-            zip: '60601',
-          },
-          isAdmin: true,
-          isAuthenticated: true,
-        });
-      },
-
-      logout: () => {
+      logout: async () => {
+        try {
+          await ApiClient.post('/auth/logout');
+        } catch (err) {
+          // Token might already be expired
+        }
+        localStorage.removeItem('am_token');
         set({
           user: null,
           isAdmin: false,
@@ -68,10 +103,29 @@ export const useAuthStore = create<AuthState>()(
         });
       },
 
-      updateProfile: (updatedProfile) => {
-        set((state) => ({
-          user: state.user ? { ...state.user, ...updatedProfile } : null,
-        }));
+      updateProfile: async (updatedFields) => {
+        try {
+          const payload: any = {
+            name: updatedFields.name || get().user?.name,
+            phone: updatedFields.phone || get().user?.phone,
+          };
+          if (updatedFields.password) {
+            payload.password = updatedFields.password;
+            payload.password_confirmation = updatedFields.password_confirmation;
+          }
+
+          const res = await ApiClient.put<any>('/auth/profile', payload);
+          const user = res.user;
+          set({
+            user: {
+              name: user.name,
+              email: user.email,
+              phone: user.phone || '',
+            }
+          });
+        } catch (err: any) {
+          throw new Error(err.message || 'Failed to update profile.');
+        }
       },
     }),
     {

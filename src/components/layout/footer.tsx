@@ -1,14 +1,28 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Logo from '../ui/logo';
 import { useLocaleStore } from '@/store/locale-store';
-import { categories } from '@/data/categories';
+import { Category } from '@/types';
+import { CategoryService } from '@/services/categories';
 import { ShieldCheck } from 'lucide-react';
 
 export default function Footer() {
   const { locale, setLocale, t } = useLocaleStore();
+  const [categoriesList, setCategoriesList] = useState<Category[]>([]);
+
+  useEffect(() => {
+    const fetchCats = async () => {
+      try {
+        const list = await CategoryService.getCategories(false);
+        setCategoriesList(list.slice(0, 4));
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchCats();
+  }, []);
 
   return (
     <footer className="bg-primary text-cream mt-auto border-t border-primary-dark">
@@ -41,23 +55,25 @@ export default function Footer() {
             </a>
           </div>
         </div>
-
+        
         {/* Shop Column */}
         <div>
           <h3 className="text-sm font-bold text-gold uppercase tracking-wider mb-4">
             {locale === 'ar' ? 'تسوق' : 'Shop'}
           </h3>
-          <ul className="space-y-2 text-xs text-cream/80">
+          <ul className="space-y-2 text-xs text-cream/80 font-cairo">
             <li>
-              <Link href="/shop" className="hover:text-gold transition-colors">
+              <Link href="/shop" className="hover:text-gold transition-colors font-sans">
                 {locale === 'ar' ? 'كل المنتجات' : 'All Products'}
               </Link>
             </li>
-            <li>
-              <Link href="/#categories-section" className="hover:text-gold transition-colors">
-                {locale === 'ar' ? 'تصفح الأقسام' : 'Categories'}
-              </Link>
-            </li>
+            {categoriesList.map((cat) => (
+              <li key={cat.slug}>
+                <Link href={`/category/${cat.slug}`} className="hover:text-gold transition-colors">
+                  {locale === 'ar' ? cat.arabicName : cat.name}
+                </Link>
+              </li>
+            ))}
             <li>
               <Link href="/shop?filter=deals" className="hover:text-gold transition-colors">
                 {t('nav.deals')}
@@ -66,11 +82,6 @@ export default function Footer() {
             <li>
               <Link href="/shop?filter=bestseller" className="hover:text-gold transition-colors">
                 {t('nav.bestsellers')}
-              </Link>
-            </li>
-            <li>
-              <Link href="/shop?sort=newest" className="hover:text-gold transition-colors">
-                {t('nav.newarrivals')}
               </Link>
             </li>
           </ul>

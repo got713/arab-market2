@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Product } from '@/types';
+import { Product, Category } from '@/types';
 import { ProductService } from '@/services/products';
-import { categories, CategoryInfo } from '@/data/categories';
+import { CategoryService } from '@/services/categories';
 import { useLocaleStore } from '@/store/locale-store';
 import ProductCard from '@/components/products/product-card';
 import { ArrowLeft, ChevronRight, LayoutGrid } from 'lucide-react';
@@ -16,30 +16,30 @@ export default function CategoryPage() {
   const { t, locale } = useLocaleStore();
   const slug = (params?.slug as string) || '';
 
-  const [categoryInfo, setCategoryInfo] = useState<CategoryInfo | null>(null);
+  const [categoryInfo, setCategoryInfo] = useState<Category | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!slug) return;
     
-    // Resolve category details
-    const cat = categories.find((c) => c.slug.toLowerCase() === slug.toLowerCase());
-    setCategoryInfo(cat || null);
-
-    // Fetch products
-    const loadCategoryProducts = async () => {
+    const loadCategoryData = async () => {
       setLoading(true);
       try {
-        const list = await ProductService.getProductsByCategory(slug);
-        setProducts(list);
+        const cat = await CategoryService.getCategoryBySlug(slug);
+        setCategoryInfo(cat || null);
+        
+        if (cat) {
+          const list = await ProductService.getProductsByCategory(cat.slug);
+          setProducts(list);
+        }
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
-    loadCategoryProducts();
+    loadCategoryData();
   }, [slug]);
 
   if (!categoryInfo && !loading) {

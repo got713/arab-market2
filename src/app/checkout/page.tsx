@@ -160,15 +160,34 @@ export default function CheckoutPage() {
   if (items.length === 0) return null;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in space-y-6 pb-20 md:pb-8">
       {/* Checkout title and secure label */}
       <div className="flex items-center justify-between border-b border-light-border pb-5">
-        <h1 className="text-2xl sm:text-4xl font-bold text-dark">{t('checkout.title')}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-dark">{t('checkout.title')}</h1>
         <span className="flex items-center gap-1 bg-green-50 border border-green-200 px-3 py-1 rounded-md text-[10px] sm:text-xs font-bold text-green-700 uppercase tracking-wide">
           <Lock className="w-3.5 h-3.5" />
-          <span>Secure Demo Session</span>
+          <span>{locale === 'ar' ? 'جلسة آمنة' : 'Secure Demo'}</span>
         </span>
       </div>
+
+      {/* Guest checkout notice */}
+      {!user && (
+        <div className="bg-cream border border-light-border rounded-xl px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <p className="text-xs text-muted-text">
+            {locale === 'ar'
+              ? 'يمكنك إتمام الطلب بدون حساب، أو تسجيل الدخول لتجربة أسرع.'
+              : 'You can checkout without an account, or sign in for a faster experience.'}
+          </p>
+          <div className="flex gap-2 shrink-0">
+            <span className="text-xs font-bold text-primary border border-primary/30 rounded-lg px-3 py-1.5 bg-white">
+              {locale === 'ar' ? '← المتابعة كضيف' : 'Continue as Guest →'}
+            </span>
+            <Link href="/account" className="text-xs text-muted-text hover:text-primary px-3 py-1.5 border border-light-border rounded-lg bg-white transition-colors">
+              {locale === 'ar' ? 'تسجيل الدخول' : 'Sign In'}
+            </Link>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleCheckoutSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Left Columns - Inputs */}

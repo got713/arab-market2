@@ -62,7 +62,7 @@ export const translations: TranslationDictionary = {
   'shop.no_products': { en: 'No products found matching your criteria.', ar: 'لم يتم العثور على منتجات تطابق اختياراتك.' },
 
   // Product Page & Card
-  'prod.single': { en: 'Single', ar: 'حبة' },
+  'prod.single': { en: 'Single', ar: 'قطعة' },
   'prod.pack': { en: 'Pack', ar: 'حزمة/رابطة' },
   'prod.case': { en: 'Case', ar: 'صندوق/كرتون' },
   'prod.add_to_cart': { en: 'Add to Cart', ar: 'إضافة إلى السلة' },

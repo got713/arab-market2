@@ -50,12 +50,12 @@ export default function AccountPage() {
   // Sync profile editing fields
   useEffect(() => {
     if (user) {
-      setName(user.name);
-      setPhone(user.phone);
-      setAddress(user.address);
-      setCity(user.city);
-      setState(user.state);
-      setZip(user.zip);
+      setName(user.name || '');
+      setPhone(user.phone || '');
+      setAddress(user.address || '');
+      setCity(user.city || '');
+      setState(user.state || '');
+      setZip(user.zip || '');
     }
   }, [user]);
 
@@ -77,20 +77,27 @@ export default function AccountPage() {
     }
   }, [isAuthenticated, user?.email]);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const syncCartWithServer = useCartStore((state) => state.syncCartWithServer);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
-
-    if (!emailInput.trim()) {
+    if (!emailInput) {
       setLoginError('Email is required.');
       return;
     }
 
-    if (emailInput.toLowerCase() === 'admin@arabmarket.com') {
-      loginAdmin();
-      router.push('/admin');
-    } else {
-      loginCustomer(emailInput, emailInput.startsWith('ahmed') ? 'Ahmed Al-Masri' : 'Sarah Mansour');
+    try {
+      if (emailInput.toLowerCase() === 'admin@arabmarket.com') {
+        await loginAdmin();
+        await syncCartWithServer();
+        router.push('/admin');
+      } else {
+        await loginCustomer(emailInput);
+        await syncCartWithServer();
+      }
+    } catch (err: any) {
+      setLoginError(err.message || 'Login failed. Please check credentials.');
     }
   };
 

@@ -1,78 +1,91 @@
 import { Coupon } from '../types';
-import { db } from './db';
-
-const delay = (ms = 100) => new Promise((resolve) => setTimeout(resolve, ms));
+import { ApiClient } from '../lib/api-client';
 
 export const CouponService = {
-  getCoupons: async (): Promise<Coupon[]> => {
-    await delay();
-    return db.getCoupons();
+  getCoupons: async (locale: 'en' | 'ar' = 'en'): Promise<Coupon[]> => {
+    try {
+      const res = await ApiClient.get<any[]>('/admin/coupons', undefined, locale);
+      return res.map(c => CouponService.formatCoupon(c));
+    } catch (err) {
+      return [];
+    }
   },
 
-  validateCoupon: async (code: string, subtotal: number): Promise<{
+  validateCoupon: async (code: string, subtotal: number, locale: 'en' | 'ar' = 'en'): Promise<{
     valid: boolean;
     coupon: Coupon | null;
     error?: string;
   }> => {
-    await delay(200);
-    const coupons = db.getCoupons();
-    const c = coupons.find((item) => item.code.toUpperCase() === code.trim().toUpperCase());
+    try {
+      const res = await ApiClient.post<any>('/coupons/validate', {
+        code,
+        order_subtotal: subtotal
+      }, undefined, locale);
 
-    if (!c) {
-      return { valid: false, coupon: null, error: 'Coupon code not found.' };
+      if (res.valid) {
+        return {
+          valid: true,
+          coupon: {
+            code: res.code,
+            type: res.type,
+            value: res.value,
+            minOrder: res.min_order_amount ?? 0,
+            expires: '', // handled backend
+            maxUsage: 9999,
+            usageCount: 0,
+            active: true
+          }
+        };
+      }
+      return { valid: false, coupon: null, error: res.message };
+    } catch (err: any) {
+      return { valid: false, coupon: null, error: err.message || 'Invalid coupon.' };
     }
-
-    // Check expiration date
-    const today = new Date().toISOString().split('T')[0];
-    if (c.expires < today) {
-      return { valid: false, coupon: null, error: 'Coupon code has expired.' };
-    }
-
-    // Check usage limits
-    if (c.usageCount >= c.maxUsage) {
-      return { valid: false, coupon: null, error: 'Coupon code has reached its usage limit.' };
-    }
-
-    // Check minimum order limits
-    if (subtotal < c.minOrder) {
-      return {
-        valid: false,
-        coupon: null,
-        error: `Minimum order of $${c.minOrder.toFixed(2)} is required to use this coupon.`,
-      };
-    }
-
-    return { valid: true, coupon: c };
   },
 
-  createCoupon: async (coupon: Coupon): Promise<Coupon> => {
-    await delay();
-    const coupons = db.getCoupons();
-    // Check if duplicate
-    const index = coupons.findIndex((c) => c.code.toUpperCase() === coupon.code.toUpperCase());
-    if (index > -1) {
-      throw new Error('Coupon code already exists.');
-    }
-    coupons.unshift(coupon);
-    db.saveCoupons(coupons);
-    return coupon;
+  createCoupon: async (coupon: Coupon, locale: 'en' | 'ar' = 'en'): Promise<Coupon> => {
+    const payload = {
+      code: coupon.code,
+      type: coupon.type,
+      value: coupon.value,
+      min_order_amount: coupon.minOrder,
+      max_usages: coupon.maxUsage,
+      active: coupon.active,
+      expires_at: coupon.expires ? `${coupon.expires} 23:59:59` : null
+    };
+
+    const res = await ApiClient.post<any>('/admin/coupons', payload, undefined, locale);
+    return CouponService.formatCoupon(res);
   },
 
-  deleteCoupon: async (code: string): Promise<boolean> => {
-    await delay();
-    const coupons = db.getCoupons();
-    const filtered = coupons.filter((c) => c.code.toUpperCase() !== code.toUpperCase());
-    if (filtered.length === coupons.length) return false;
-    db.saveCoupons(filtered);
-    return true;
+  deleteCoupon: async (code: string, locale: 'en' | 'ar' = 'en'): Promise<boolean> => {
+    try {
+      const coupons = await ApiClient.get<any[]>('/admin/coupons', undefined, locale);
+      const found = coupons.find(c => c.code.toUpperCase() === code.toUpperCase());
+      if (!found) return false;
+      
+      await ApiClient.delete(`/admin/coupons/${found.id}`, undefined, locale);
+      return true;
+    } catch (err) {
+      return false;
+    }
   },
 
   incrementCouponUsage: async (code: string): Promise<boolean> => {
-    const coupons = db.getCoupons();
-    const index = coupons.findIndex((c) => c.code.toUpperCase() === code.toUpperCase());
-    if (index === -1) return false;
-    coupons[index].usageCount += 1;
-    db.saveCoupons(coupons);
+    // Handled automatically on the Laravel backend when order is placed.
     return true;
   },
+
+  formatCoupon: (c: any): Coupon => {
+    return {
+      code: c.code,
+      type: c.type,
+      value: (floatOrNum => Number(floatOrNum))(c.value),
+      minOrder: (floatOrNum => Number(floatOrNum))(c.min_order_amount),
+      expires: c.expires_at ? c.expires_at.split('T')[0] : '',
+      maxUsage: c.max_usages ?? 999,
+      usageCount: c.usage_count ?? 0,
+      active: Boolean(c.active)
+    };
+  }
 };

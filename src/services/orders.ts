@@ -1,24 +1,27 @@
 import { Order, CartItem, OrderCustomer } from '../types';
-import { db } from './db';
-
-const delay = (ms = 100) => new Promise((resolve) => setTimeout(resolve, ms));
+import { ApiClient } from '../lib/api-client';
 
 export const OrderService = {
-  getOrders: async (): Promise<Order[]> => {
-    await delay();
-    return db.getOrders();
+  getOrders: async (params?: any, locale: 'en' | 'ar' = 'en'): Promise<Order[]> => {
+    try {
+      const res = await ApiClient.get<any>('/admin/orders', { params }, locale);
+      const data = res.data || res;
+      return Array.isArray(data) ? data.map(o => OrderService.formatOrder(o)) : [];
+    } catch (err) {
+      return [];
+    }
   },
 
-  getOrderById: async (id: string): Promise<Order | null> => {
-    await delay();
-    const list = db.getOrders();
-    return list.find((o) => o.id === id) || null;
+  getOrderById: async (id: string, locale: 'en' | 'ar' = 'en'): Promise<Order | null> => {
+    try {
+      return await OrderService.trackOrder(id, locale);
+    } catch (err) {
+      return null;
+    }
   },
 
-  getOrdersByCustomerEmail: async (email: string): Promise<Order[]> => {
-    await delay();
-    const list = db.getOrders();
-    return list.filter((o) => o.customer.email.toLowerCase() === email.toLowerCase());
+  getOrdersByCustomerEmail: async (email: string, locale: 'en' | 'ar' = 'en'): Promise<Order[]> => {
+    return OrderService.getOrders({ search: email }, locale);
   },
 
   createOrder: async (
@@ -28,104 +31,134 @@ export const OrderService = {
     shipping: number,
     discount: number,
     total: number,
-    paymentMethod: string
+    paymentMethod: string,
+    couponCode?: string,
+    locale: 'en' | 'ar' = 'en'
   ): Promise<Order> => {
-    await delay();
-    const list = db.getOrders();
-    
-    // Generate order ID like AM-10483
-    let nextNum = 10001;
-    if (list.length > 0) {
-      const numericIds = list
-        .map((o) => parseInt(o.id.replace('AM-', '')))
-        .filter((n) => !isNaN(n));
-      if (numericIds.length > 0) {
-        nextNum = Math.max(...numericIds) + 1;
-      }
-    }
-
-    const orderId = `AM-${nextNum}`;
-    const trackingNumber = `TRK-${Math.floor(100000000 + Math.random() * 900000000)}`;
-
-    const newOrder: Order = {
-      id: orderId,
-      customer,
-      items,
-      subtotal,
-      shipping,
-      discount,
-      total,
-      paymentMethod,
-      status: 'Pending',
-      date: new Date().toISOString(),
-      trackingNumber,
+    const payload = {
+      customer_name: customer.name,
+      customer_email: customer.email,
+      customer_phone: customer.phone,
+      shipping_address: customer.address,
+      shipping_city: customer.city,
+      shipping_state: customer.state,
+      shipping_zip: customer.zip,
+      shipping_method: 'Standard',
+      shipping_cost: shipping,
+      coupon_code: couponCode || null,
+      payment_method: paymentMethod,
+      items: items.map(i => ({
+        product_id: i.product.id,
+        option: i.option,
+        quantity: i.quantity
+      })),
+      notes: ''
     };
 
-    list.unshift(newOrder);
-    db.saveOrders(list);
-
-    // Also update or add customer details in admin customers database
-    const customers = db.getCustomers();
-    const customerIndex = customers.findIndex(
-      (c) => c.email.toLowerCase() === customer.email.toLowerCase()
-    );
-
-    if (customerIndex > -1) {
-      customers[customerIndex].ordersCount += 1;
-      customers[customerIndex].totalSpent = Number((customers[customerIndex].totalSpent + total).toFixed(2));
-      customers[customerIndex].lastOrderDate = new Date().toISOString().split('T')[0];
-      customers[customerIndex].status = 'Active';
-    } else {
-      customers.unshift({
-        id: `cust-${Date.now()}`,
-        name: customer.name || 'Customer',
-        email: customer.email,
-        ordersCount: 1,
-        totalSpent: Number(total.toFixed(2)),
-        lastOrderDate: new Date().toISOString().split('T')[0],
-        status: 'Active',
-      });
-    }
-    db.saveCustomers(customers);
-
-    // Update product stock counts
-    const products = db.getProducts();
-    items.forEach((item) => {
-      const prodIndex = products.findIndex((p) => p.id === item.product.id);
-      if (prodIndex > -1) {
-        // Option quantities: single = 1, pack = 6, case = 12
-        const qtyToReduce =
-          item.quantity * (item.option === 'single' ? 1 : item.option === 'pack' ? 6 : 12);
-        products[prodIndex].stock = Math.max(0, products[prodIndex].stock - qtyToReduce);
-      }
-    });
-    db.saveProducts(products);
-
-    return newOrder;
+    const res = await ApiClient.post<any>('/orders', payload, undefined, locale);
+    return OrderService.formatOrder(res.order);
   },
 
   updateOrderStatus: async (
     orderId: string,
-    status: Order['status']
+    status: Order['status'],
+    paymentStatus?: string,
+    locale: 'en' | 'ar' = 'en'
   ): Promise<Order> => {
-    await delay();
-    const list = db.getOrders();
-    const index = list.findIndex((o) => o.id === orderId);
-    if (index === -1) throw new Error('Order not found');
-    list[index].status = status;
-    db.saveOrders(list);
-    return list[index];
+    // Map status labels if they are differently cased in UI
+    const targetStatus = status.toLowerCase();
+    
+    // Fetch DB record by order number first to get the auto-increment ID
+    const orderDetails = await OrderService.trackOrder(orderId, locale);
+    if (!orderDetails) throw new Error('Order not found');
+
+    const res = await ApiClient.put<any>(`/admin/orders/${orderDetails.databaseId}/status`, {
+      status: targetStatus,
+      payment_status: paymentStatus
+    }, undefined, locale);
+
+    return OrderService.formatOrder(res);
   },
 
-  trackOrder: async (query: string): Promise<Order | null> => {
-    await delay();
-    const q = query.trim().toUpperCase();
-    if (!q) return null;
-    const list = db.getOrders();
-    return (
-      list.find(
-        (o) => o.id === q || o.trackingNumber === q || o.id.replace('AM-', '') === q
-      ) || null
-    );
+  trackOrder: async (query: string, locale: 'en' | 'ar' = 'en'): Promise<Order | null> => {
+    try {
+      const q = query.trim();
+      if (!q) return null;
+      const res = await ApiClient.get<any>(`/orders/track/${q}`, undefined, locale);
+      return OrderService.formatOrder(res);
+    } catch (err) {
+      return null;
+    }
   },
+
+  formatOrder: (o: any): Order => {
+    if (!o) return null as any;
+    
+    // Map order status to match UI expects capitalized
+    const statusMap: Record<string, string> = {
+      'pending': 'Pending',
+      'confirmed': 'Confirmed',
+      'processing': 'Processing',
+      'packed': 'Packed',
+      'shipped': 'Shipped',
+      'out_for_delivery': 'Out for Delivery',
+      'delivered': 'Delivered',
+      'cancelled': 'Cancelled',
+    };
+
+    // Format items
+    const formattedItems: CartItem[] = (o.items || []).map((item: any) => {
+      const prod = item.product || {};
+      const imageUrl = prod.images && prod.images.length > 0 
+        ? prod.images[0].url || prod.images[0] 
+        : 'https://placehold.co/400x400/FDF8F0/6B6355?text=No+Image';
+
+      return {
+        id: item.id,
+        option: item.option || 'single',
+        quantity: item.quantity,
+        price: Number(item.price),
+        product: {
+          id: String(prod.id),
+          name: prod.name,
+          slug: prod.slug,
+          arabicName: prod.arabic_name,
+          brand: prod.brand,
+          price: Number(prod.price),
+          images: [imageUrl],
+          weight: prod.weight || '',
+          stock: prod.inventory ? prod.inventory.stock_quantity : 0,
+          purchaseOptions: {
+            single: { price: Number(prod.price), quantity: 1 },
+            pack: { price: Number(prod.pack_price), quantity: prod.pack_quantity || 6 },
+            case: { price: Number(prod.case_price), quantity: prod.case_quantity || 12 },
+          }
+        }
+      };
+    });
+
+    return {
+      id: o.order_number,
+      databaseId: o.id, // Store Laravel auto-increment ID
+      customer: {
+        name: o.customer_name,
+        email: o.customer_email,
+        phone: o.customer_phone,
+        address: o.shipping_address,
+        city: o.shipping_city,
+        state: o.shipping_state,
+        zip: o.shipping_zip,
+      },
+      items: formattedItems,
+      subtotal: Number(o.subtotal),
+      shipping: Number(o.shipping_cost),
+      discount: Number(o.discount),
+      total: Number(o.total),
+      paymentMethod: o.payment_method,
+      paymentStatus: o.payment_status,
+      status: (statusMap[o.status] || o.status) as Order['status'],
+      date: o.created_at,
+      trackingNumber: o.tracking_number || '',
+    };
+  }
 };

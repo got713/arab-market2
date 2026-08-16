@@ -57,6 +57,13 @@ export default function ProductDetailPage() {
 
         if (prod) {
           setProduct(prod);
+          // Set default selected option to first enabled choice
+          const enabledOpts = (['single', 'pack', 'case'] as const).filter(
+            (key) => prod.purchaseOptions[key]?.enabled !== false
+          );
+          if (enabledOpts.length > 0) {
+            setSelectedOption(enabledOpts[0]);
+          }
           // Fetch related products in the same category
           const related = await ProductService.getProductsByCategory(prod.category);
           setRelatedProducts(related.filter((r) => r.id !== prod?.id).slice(0, 4));

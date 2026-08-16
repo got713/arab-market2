@@ -1,4 +1,4 @@
-const delay = (ms = 100) => new Promise((resolve) => setTimeout(resolve, ms));
+import { ApiClient } from '../lib/api-client';
 
 export interface ShippingRate {
   id: string;
@@ -10,39 +10,38 @@ export interface ShippingRate {
 }
 
 export const ShippingService = {
-  checkAvailability: async (zip: string): Promise<{
+  checkAvailability: async (zip: string, locale: 'en' | 'ar' = 'en'): Promise<{
     available: boolean;
     rates: ShippingRate[];
   }> => {
-    await delay(300); // Simulate network latency
-    const isValid = /^\d{5}$/.test(zip);
-    // Simulate some restricted ZIP codes (e.g. starting with '00' or '999')
-    const isSupported = isValid && !zip.startsWith('00') && !zip.startsWith('999');
+    try {
+      const isValid = /^\d{5}$/.test(zip);
+      if (!isValid) {
+        return { available: false, rates: [] };
+      }
 
-    if (!isSupported) {
+      const res = await ApiClient.post<any>('/checkout/shipping-rates', { zip }, undefined, locale);
+      const rates = res.rates || [];
+
+      if (rates.length === 0) {
+        return { available: false, rates: [] };
+      }
+
+      const formatted = rates.map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        arabicName: r.name_ar || r.name,
+        price: Number(r.cost),
+        minDays: r.estimated_days,
+        maxDays: r.estimated_days + 1,
+      }));
+
+      return {
+        available: true,
+        rates: formatted,
+      };
+    } catch (err) {
       return { available: false, rates: [] };
     }
-
-    return {
-      available: true,
-      rates: [
-        {
-          id: 'standard',
-          name: 'Standard Delivery',
-          arabicName: 'الشحن القياسي',
-          price: 7.99,
-          minDays: 3,
-          maxDays: 5,
-        },
-        {
-          id: 'express',
-          name: 'Express Delivery',
-          arabicName: 'الشحن السريع',
-          price: 14.99,
-          minDays: 1,
-          maxDays: 2,
-        },
-      ],
-    };
   },
 };

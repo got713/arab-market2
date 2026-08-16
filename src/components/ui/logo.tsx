@@ -7,9 +7,9 @@ interface LogoProps {
 }
 
 export default function Logo({ className = '', variant = 'full', light = false }: LogoProps) {
-  const greenColor = light ? '#FFFFFF' : '#123D2F';
-  const goldColor = '#C8A24D';
-  const textColor = light ? '#FFFFFF' : '#123D2F';
+  const greenColor = light ? '#FFFFFF' : '#182B3A';
+  const goldColor = '#C69C5D';
+  const textColor = light ? '#FFFFFF' : '#182B3A';
   const subTextColor = goldColor;
 
   if (variant === 'icon') {
