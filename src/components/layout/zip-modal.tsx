@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useCartStore } from '@/store/cart-store';
 import { useLocaleStore } from '@/store/locale-store';
+import { formatPrice } from '@/lib/utils';
 import { X, MapPin } from 'lucide-react';
 
 interface ZipModalProps {
@@ -12,7 +13,7 @@ interface ZipModalProps {
 
 export default function ZipModal({ isOpen, onClose }: ZipModalProps) {
   const t = useLocaleStore((state) => state.t);
-  const { shippingZip, checkZip, isZipChecked, isDeliveryAvailable, resetZip } = useCartStore();
+  const { shippingZip, checkZip, isZipChecked, isDeliveryAvailable, resetZip, standardRate, expressRate } = useCartStore();
   const [zipInput, setZipInput] = useState(shippingZip);
   const [error, setError] = useState('');
 
@@ -87,11 +88,11 @@ export default function ZipModal({ isOpen, onClose }: ZipModalProps) {
                   <div className="text-xs text-gray-600 space-y-1.5 pt-2 border-t border-gray-200">
                     <div className="flex justify-between">
                       <span>{t('zip.standard')}</span>
-                      <strong>$7.99</strong>
+                      <strong>{formatPrice(standardRate)}</strong>
                     </div>
                     <div className="flex justify-between">
                       <span>{t('zip.express')}</span>
-                      <strong>$14.99</strong>
+                      <strong>{formatPrice(expressRate)}</strong>
                     </div>
                   </div>
                 </div>

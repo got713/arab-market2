@@ -6,18 +6,12 @@ import { Product } from '@/types';
 import { useLocaleStore } from '@/store/locale-store';
 import { useCartStore } from '@/store/cart-store';
 import { useWishlistStore } from '@/store/wishlist-store';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, getPurchaseOptionLabel } from '@/lib/utils';
 import { Heart, Star, Minus, Plus, ShoppingCart, X } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
 }
-
-const DEFAULT_LABELS = {
-  single: { en: 'Each',  ar: 'قطعة'   },
-  pack:   { en: 'Pack',  ar: 'ربطة'  },
-  case:   { en: 'Case',  ar: 'كرتون' },
-} as const;
 
 export default function ProductCard({ product }: ProductCardProps) {
   const { locale } = useLocaleStore();
@@ -44,12 +38,8 @@ export default function ProductCard({ product }: ProductCardProps) {
   const price       = currentOpt.price;
 
   // Label for the selected option
-  const getLabel = (key: typeof enabledOpts[number]) => {
-    const opt = product.purchaseOptions[key];
-    return isAr
-      ? (opt.labelAr || DEFAULT_LABELS[key].ar)
-      : (opt.label   || DEFAULT_LABELS[key].en);
-  };
+  const getLabel = (key: typeof enabledOpts[number]) =>
+    getPurchaseOptionLabel(product.purchaseOptions, key, locale, product.sellingUnit);
 
   // Cart quantity for current product+option
   const cartItem = items.find((i) => i.product.id === product.id && i.option === selectedOption);

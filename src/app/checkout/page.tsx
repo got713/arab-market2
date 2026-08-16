@@ -6,7 +6,7 @@ import { Elements } from '@stripe/react-stripe-js';
 import { useCartStore } from '@/store/cart-store';
 import { useLocaleStore } from '@/store/locale-store';
 import { useAuthStore } from '@/store/auth-store';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, getPurchaseOptionLabel } from '@/lib/utils';
 import { PaymentService, getStripe } from '@/services/payments';
 import { OrderService } from '@/services/orders';
 import StripePaymentForm from '@/components/checkout/stripe-payment-form';
@@ -29,6 +29,8 @@ export default function CheckoutPage() {
     clearCart,
     shippingZip,
     appliedCoupon,
+    standardRate,
+    expressRate,
   } = useCartStore();
 
   // Redirect to cart if empty — but not once an order has already been placed
@@ -102,10 +104,8 @@ export default function CheckoutPage() {
       const newOrder = await OrderService.createOrder(
         customerRecord,
         items,
-        subtotal,
-        shipping,
+        shippingOption,
         discount,
-        total,
         'Credit Card (Stripe)',
         appliedCoupon?.code, // previously dropped entirely — server can't validate/track a coupon it never receives
         locale
@@ -131,7 +131,7 @@ export default function CheckoutPage() {
   const handlePaymentSuccess = () => {
     clearCart();
     if (placedOrder) {
-      router.push(`/order-success?id=${placedOrder.id}`);
+      router.push(`/order-success?id=${placedOrder.id}&email=${encodeURIComponent(placedOrder.customer.email)}`);
     }
   };
 
@@ -303,7 +303,7 @@ export default function CheckoutPage() {
                 >
                   <div className="flex justify-between items-center w-full">
                     <span className="font-bold text-sm text-dark">{t('zip.standard')}</span>
-                    <span className="text-xs text-primary font-bold">$7.99</span>
+                    <span className="text-xs text-primary font-bold">{formatPrice(standardRate, locale)}</span>
                   </div>
                   <span className="text-xs text-gray-500">Delivered in 3–5 business days</span>
                 </button>
@@ -319,7 +319,7 @@ export default function CheckoutPage() {
                 >
                   <div className="flex justify-between items-center w-full">
                     <span className="font-bold text-sm text-dark">{t('zip.express')}</span>
-                    <span className="text-xs text-primary font-bold">$14.99</span>
+                    <span className="text-xs text-primary font-bold">{formatPrice(expressRate, locale)}</span>
                   </div>
                   <span className="text-xs text-gray-500">Delivered in 1–2 business days</span>
                 </button>
@@ -357,7 +357,7 @@ export default function CheckoutPage() {
                           {locale === 'ar' ? item.product.arabicName : item.product.name}
                         </strong>
                         <span className="text-gray-500 text-[10px] block">
-                          {item.quantity} x {t(`prod.${item.option}`)}
+                          {item.quantity} x {getPurchaseOptionLabel(item.product.purchaseOptions, item.option, locale, item.product.sellingUnit)}
                         </span>
                       </div>
                       <span className="font-bold text-primary flex-shrink-0">
@@ -443,7 +443,7 @@ export default function CheckoutPage() {
                 <Elements stripe={stripePromiseMemo} options={{ clientSecret }}>
                   <StripePaymentForm
                     locale={locale}
-                    returnUrl={typeof window !== 'undefined' ? `${window.location.origin}/order-success?id=${placedOrder?.id}` : ''}
+                    returnUrl={typeof window !== 'undefined' && placedOrder ? `${window.location.origin}/order-success?id=${placedOrder.id}&email=${encodeURIComponent(placedOrder.customer.email)}` : ''}
                     onSuccess={handlePaymentSuccess}
                   />
                 </Elements>

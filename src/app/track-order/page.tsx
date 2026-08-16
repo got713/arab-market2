@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Order } from '@/types';
 import { OrderService } from '@/services/orders';
 import { useLocaleStore } from '@/store/locale-store';
-import { formatDate, formatPrice } from '@/lib/utils';
+import { formatDate, formatPrice, getPurchaseOptionLabel } from '@/lib/utils';
 import { 
   Search, 
   MapPin, 
@@ -26,41 +26,43 @@ function TrackOrderContent() {
   const { t, locale } = useLocaleStore();
   
   const queryId = searchParams?.get('id') || '';
+  const queryEmail = searchParams?.get('email') || '';
   const [searchInput, setSearchInput] = useState(queryId);
+  const [emailInput, setEmailInput] = useState(queryEmail);
   const [order, setOrder] = useState<Order | null>(null);
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (queryId) {
-      handleTrack(queryId);
-    }
-  }, [queryId]);
-
-  const handleTrack = async (idToTrack: string) => {
+  const handleTrack = React.useCallback(async (idToTrack: string, emailToTrack: string) => {
     setLoading(true);
     setError('');
     setSearched(true);
     try {
-      const result = await OrderService.trackOrder(idToTrack);
+      const result = await OrderService.trackOrder(idToTrack, emailToTrack);
       if (result) {
         setOrder(result);
       } else {
         setOrder(null);
-        setError('No order found with the provided ID or tracking number. Please check the spelling.');
+        setError('No order found for that order number and email combination. Please check both and try again.');
       }
     } catch (err) {
       setError('An error occurred during order lookup.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (queryId && queryEmail) {
+      handleTrack(queryId, queryEmail);
+    }
+  }, [queryId, queryEmail, handleTrack]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchInput.trim()) {
-      router.push(`/track-order?id=${encodeURIComponent(searchInput.trim().toUpperCase())}`);
+    if (searchInput.trim() && emailInput.trim()) {
+      router.push(`/track-order?id=${encodeURIComponent(searchInput.trim().toUpperCase())}&email=${encodeURIComponent(emailInput.trim())}`);
     }
   };
 
@@ -93,23 +95,39 @@ function TrackOrderContent() {
 
       {/* Tracker search Form */}
       <div className="max-w-md mx-auto bg-white border border-light-border p-4 rounded-xl shadow-xs">
-        <form onSubmit={handleSubmit} className="flex gap-2">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder={t('order.track.placeholder')}
-              className="w-full pl-4 pr-10 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm uppercase font-semibold"
-            />
-            <Search className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
+        <form onSubmit={handleSubmit} className="space-y-2.5">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                required
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder={t('order.track.placeholder')}
+                className="w-full pl-4 pr-10 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm uppercase font-semibold"
+              />
+              <Search className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
+            <button
+              type="submit"
+              className="px-5 py-2.5 bg-primary text-cream text-xs font-bold rounded-lg hover:bg-primary-dark transition-colors"
+            >
+              {locale === 'ar' ? 'تتبع' : 'Track'}
+            </button>
           </div>
-          <button
-            type="submit"
-            className="px-5 py-2.5 bg-primary text-cream text-xs font-bold rounded-lg hover:bg-primary-dark transition-colors"
-          >
-            {locale === 'ar' ? 'تتبع' : 'Track'}
-          </button>
+          <input
+            type="email"
+            required
+            value={emailInput}
+            onChange={(e) => setEmailInput(e.target.value)}
+            placeholder={locale === 'ar' ? 'البريد الإلكتروني المستخدم في الطلب' : 'Email used on the order'}
+            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
+          />
+          <p className="text-[10px] text-gray-400 px-0.5">
+            {locale === 'ar'
+              ? 'للحماية، نحتاج رقم الطلب والبريد الإلكتروني معاً لعرض تفاصيله.'
+              : 'For your privacy, we need both the order number and the email used on it to show order details.'}
+          </p>
         </form>
       </div>
 
@@ -234,7 +252,7 @@ function TrackOrderContent() {
                   <div key={idx} className="py-2 flex justify-between text-xs items-center gap-2">
                     <div>
                       <span className="font-bold text-dark block">{locale === 'ar' ? item.product.arabicName : item.product.name}</span>
-                      <span className="text-[10px] text-gray-500 uppercase">{item.quantity} x {t(`prod.${item.option}`)}</span>
+                      <span className="text-[10px] text-gray-500 uppercase">{item.quantity} x {getPurchaseOptionLabel(item.product.purchaseOptions, item.option, locale, item.product.sellingUnit)}</span>
                     </div>
                     <span className="font-semibold text-primary">{formatPrice(item.product.purchaseOptions[item.option].price * item.quantity, locale)}</span>
                   </div>
@@ -255,7 +273,7 @@ function TrackOrderContent() {
         <div className="text-center py-12 max-w-sm mx-auto space-y-3">
           <ClipboardList className="w-12 h-12 text-gray-300 mx-auto" />
           <p className="text-sm text-gray-500">
-            Please enter your order ID (e.g. <strong>AM-10482</strong>) above to retrieve your shipping status.
+            Please enter your order number (e.g. <strong>AM-10482</strong>) and the email used on the order above to retrieve your shipping status.
           </p>
         </div>
       )}

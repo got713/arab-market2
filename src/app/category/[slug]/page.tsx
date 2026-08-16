@@ -101,7 +101,7 @@ export default function CategoryPage() {
             {categoryInfo.subcategories.map((sub) => (
               <Link
                 key={sub.slug}
-                href={`/shop?category=${categoryInfo.slug}`}
+                href={`/shop?category=${categoryInfo.slug}&subcategory=${sub.slug}`}
                 className="px-3.5 py-1.5 rounded-full border border-gray-300 hover:border-primary hover:text-primary transition-all text-xs bg-white"
               >
                 {locale === 'ar' ? sub.arabicName : sub.name}

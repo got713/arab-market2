@@ -12,29 +12,42 @@ export const OrderService = {
     }
   },
 
-  getOrderById: async (id: string, locale: 'en' | 'ar' = 'en'): Promise<Order | null> => {
+  getOrderById: async (id: string, email: string, locale: 'en' | 'ar' = 'en'): Promise<Order | null> => {
     try {
-      return await OrderService.trackOrder(id, locale);
+      return await OrderService.trackOrder(id, email, locale);
     } catch (err) {
       return null;
     }
   },
 
-  getOrdersByCustomerEmail: async (email: string, locale: 'en' | 'ar' = 'en'): Promise<Order[]> => {
-    return OrderService.getOrders({ search: email }, locale);
+  // The authenticated customer's own order history — the backend derives
+  // "whose orders" entirely from the Sanctum token (see
+  // OrderController::myOrders, scoped via $request->user()->orders()), never
+  // from a client-supplied email. Previously this incorrectly called the
+  // admin-only /admin/orders?search= endpoint, which 403s for a real customer.
+  getMyOrders: async (locale: 'en' | 'ar' = 'en'): Promise<Order[]> => {
+    try {
+      const res = await ApiClient.get<any[]>('/orders/my', undefined, locale);
+      return Array.isArray(res) ? res.map((o) => OrderService.formatOrder(o)) : [];
+    } catch (err) {
+      return [];
+    }
   },
 
   createOrder: async (
     customer: OrderCustomer,
     items: CartItem[],
-    subtotal: number,
-    shipping: number,
+    shippingMethod: 'standard' | 'express',
     discount: number,
-    total: number,
     paymentMethod: string,
     couponCode?: string,
     locale: 'en' | 'ar' = 'en'
   ): Promise<Order> => {
+    // Shipping cost is deliberately NOT sent here — the backend derives it
+    // server-side from shipping_zip + shipping_method (see
+    // OrderController::resolveShippingCost) so it can't be tampered with by
+    // sending a manipulated shipping_cost value. Only the method identifier
+    // ('standard' | 'express') is sent.
     const payload = {
       customer_name: customer.name,
       customer_email: customer.email,
@@ -43,8 +56,7 @@ export const OrderService = {
       shipping_city: customer.city,
       shipping_state: customer.state,
       shipping_zip: customer.zip,
-      shipping_method: 'Standard',
-      shipping_cost: shipping,
+      shipping_method: shippingMethod,
       coupon_code: couponCode || null,
       payment_method: paymentMethod,
       items: items.map(i => ({
@@ -59,20 +71,20 @@ export const OrderService = {
     return OrderService.formatOrder(res.order);
   },
 
+  // Takes the order's internal database id directly (admin already has this
+  // from the /admin/orders list) rather than re-resolving it through the
+  // public tracking endpoint — that endpoint now requires the customer's
+  // email as a second factor (see trackOrder below) and admins updating
+  // order status don't necessarily have that on hand.
   updateOrderStatus: async (
-    orderId: string,
+    orderDatabaseId: number | string,
     status: Order['status'],
     paymentStatus?: string,
     locale: 'en' | 'ar' = 'en'
   ): Promise<Order> => {
-    // Map status labels if they are differently cased in UI
     const targetStatus = status.toLowerCase();
-    
-    // Fetch DB record by order number first to get the auto-increment ID
-    const orderDetails = await OrderService.trackOrder(orderId, locale);
-    if (!orderDetails) throw new Error('Order not found');
 
-    const res = await ApiClient.put<any>(`/admin/orders/${orderDetails.databaseId}/status`, {
+    const res = await ApiClient.put<any>(`/admin/orders/${orderDatabaseId}/status`, {
       status: targetStatus,
       payment_status: paymentStatus
     }, undefined, locale);
@@ -80,11 +92,15 @@ export const OrderService = {
     return OrderService.formatOrder(res);
   },
 
-  trackOrder: async (query: string, locale: 'en' | 'ar' = 'en'): Promise<Order | null> => {
+  // Public order lookup — requires the order number AND the email used on the
+  // order, matching the backend's OrderController::track(). A bare order
+  // number is not enough to view another customer's name/email/phone/address.
+  trackOrder: async (query: string, email: string, locale: 'en' | 'ar' = 'en'): Promise<Order | null> => {
     try {
       const q = query.trim();
-      if (!q) return null;
-      const res = await ApiClient.get<any>(`/orders/track/${q}`, undefined, locale);
+      const e = email.trim();
+      if (!q || !e) return null;
+      const res = await ApiClient.get<any>(`/orders/track/${q}`, { params: { email: e } }, locale);
       return OrderService.formatOrder(res);
     } catch (err) {
       return null;

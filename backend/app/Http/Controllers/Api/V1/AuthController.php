@@ -8,6 +8,8 @@ use App\Models\Address;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -53,12 +55,83 @@ class AuthController extends Controller
             ]);
         }
 
+        if (!$user->is_active) {
+            throw ValidationException::withMessages([
+                'email' => [is_rtl_locale() ? 'تم تعطيل هذا الحساب. برجاء التواصل مع الدعم الفني.' : 'This account has been deactivated. Please contact support.'],
+            ]);
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'access_token' => $token,
             'token_type' => 'Bearer',
             'user' => $user
+        ]);
+    }
+
+    // ── PASSWORD RESET ────────────────────────────────────────────────
+    //
+    // SECURITY: both endpoints return the exact same generic response whether
+    // or not the email exists — never let the response shape/content reveal
+    // account existence (account enumeration). Route-level throttle (see
+    // routes/api.php) plus Laravel's own broker throttle (60s between
+    // requests for the same email, config/auth.php `passwords.users.throttle`)
+    // both apply.
+
+    public function forgotPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        // Deliberately ignore the return status ($status would reveal whether
+        // the email exists) — always respond with the same generic message.
+        Password::sendResetLink($request->only('email'));
+
+        return response()->json([
+            'message' => is_rtl_locale()
+                ? 'إذا كان هناك حساب مرتبط بهذا البريد الإلكتروني، فسيتم إرسال رابط إعادة تعيين كلمة المرور إليه.'
+                : 'If an account exists for this email, a password reset link has been sent.',
+        ]);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'token' => 'required|string',
+            'email' => 'required|email',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function (User $user, string $password) {
+                $user->forceFill(['password' => Hash::make($password)])->save();
+
+                // Resetting the password invalidates every existing session —
+                // this is a bearer-token (Sanctum) architecture, so that means
+                // revoking every previously issued personal access token. This
+                // protects against a stolen/leaked token surviving a reset.
+                $user->tokens()->delete();
+
+                event(new PasswordReset($user));
+            }
+        );
+
+        if ($status !== Password::PASSWORD_RESET) {
+            // Same generic wording for "invalid token", "expired token", and
+            // "unknown email" — none of these should be distinguishable to the
+            // caller.
+            return response()->json([
+                'message' => is_rtl_locale()
+                    ? 'رابط إعادة تعيين كلمة المرور غير صالح أو منتهي الصلاحية.'
+                    : 'This password reset link is invalid or has expired.',
+            ], 400);
+        }
+
+        return response()->json([
+            'message' => is_rtl_locale() ? 'تم تحديث كلمة المرور بنجاح.' : 'Your password has been reset successfully.',
         ]);
     }
 
@@ -147,9 +220,12 @@ class AuthController extends Controller
 
     public function updateAddress(Request $request, $id)
     {
+        // Ownership is enforced by scoping the lookup through the authenticated
+        // user's own addresses() relation — findOrFail() 404s for any address
+        // that isn't theirs, regardless of what id is requested.
         $address = $request->user()->addresses()->findOrFail($id);
 
-        $request->validate([
+        $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
@@ -166,7 +242,10 @@ class AuthController extends Controller
             $request->user()->addresses()->update(['is_default' => false]);
         }
 
-        $address->update($request->all());
+        // Only the validated field set is written — never $request->all(), which
+        // would let a client slip an extra `user_id` (or any other column) into
+        // the update and reassign this address to a different account.
+        $address->update($validated);
 
         return response()->json($address);
     }

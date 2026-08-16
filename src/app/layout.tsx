@@ -17,9 +17,35 @@ const cairo = Cairo({
   display: 'swap',
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+const SITE_TITLE = 'عرب ماركت | Arab Market — Middle Eastern Groceries Delivered Across America';
+const SITE_DESCRIPTION =
+  'تسوق أفضل المنتجات العربية والشرق أوسطية — بقالة، حلويات، مشروبات، توابل، ومستلزمات منزلية. توصيل لكل أمريكا. Shop authentic Middle Eastern groceries delivered across America.';
+
 export const metadata: Metadata = {
-  title: 'عرب ماركت | Arab Market — Middle Eastern Groceries Delivered Across America',
-  description: 'تسوق أفضل المنتجات العربية والشرق أوسطية — بقالة، حلويات، مشروبات، توابل، ومستلزمات منزلية. توصيل لكل أمريكا. Shop authentic Middle Eastern groceries delivered across America.',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: '%s | Arab Market',
+  },
+  description: SITE_DESCRIPTION,
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    siteName: 'Arab Market',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    locale: 'en_US',
+    alternateLocale: 'ar_EG',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({

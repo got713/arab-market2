@@ -9,6 +9,16 @@ export interface ShippingRate {
   maxDays: number;
 }
 
+export interface ShippingMethodConfig {
+  id: number;
+  code: string;
+  name: string;
+  arabic_name: string;
+  price: number;
+  active: boolean;
+  display_order: number;
+}
+
 export const ShippingService = {
   checkAvailability: async (zip: string, locale: 'en' | 'ar' = 'en'): Promise<{
     available: boolean;
@@ -43,5 +53,19 @@ export const ShippingService = {
     } catch (err) {
       return { available: false, rates: [] };
     }
+  },
+
+  // ── ADMIN ────────────────────────────────────────────────────────
+
+  getMethods: async (locale: 'en' | 'ar' = 'en'): Promise<ShippingMethodConfig[]> => {
+    return ApiClient.get<ShippingMethodConfig[]>('/admin/shipping-methods', undefined, locale);
+  },
+
+  updateMethod: async (
+    id: number,
+    data: { name: string; arabic_name: string; price: number; active: boolean },
+    locale: 'en' | 'ar' = 'en'
+  ): Promise<ShippingMethodConfig> => {
+    return ApiClient.put<ShippingMethodConfig>(`/admin/shipping-methods/${id}`, data, undefined, locale);
   },
 };

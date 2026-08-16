@@ -1,76 +1,174 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocaleStore } from '@/store/locale-store';
-import { BarChart3, TrendingUp, AlertTriangle, Clock } from 'lucide-react';
+import { ApiClient } from '@/lib/api-client';
+import { AnalyticsService, AnalyticsRange, AnalyticsSummary } from '@/services/analytics';
+import { formatPrice, getErrorMessage } from '@/lib/utils';
+import { BarChart3, TrendingUp, AlertTriangle, Users, ShoppingCart, DollarSign } from 'lucide-react';
+
+interface LowStockRow {
+  id: number;
+  name: string;
+  arabicName: string;
+  stock: number;
+}
+
+const RANGES: { id: AnalyticsRange; label: string; labelAr: string }[] = [
+  { id: '7d', label: '7 days', labelAr: '7 أيام' },
+  { id: '30d', label: '30 days', labelAr: '30 يوم' },
+  { id: '90d', label: '90 days', labelAr: '90 يوم' },
+  { id: '12m', label: '12 months', labelAr: '12 شهر' },
+];
 
 export default function AdminAnalyticsPage() {
   const { locale } = useLocaleStore();
+  const isAr = locale === 'ar';
 
-  // Mock performance metrics for the 6 new categories
-  const categoriesPerformance = [
-    { name: locale === 'ar' ? 'البقالة' : 'Groceries', percentage: 38, sales: '$18,520' },
-    { name: locale === 'ar' ? 'المجمدات' : 'Frozen', percentage: 22, sales: '$10,728' },
-    { name: locale === 'ar' ? 'المشروبات' : 'Drinks', percentage: 16, sales: '$7,801' },
-    { name: locale === 'ar' ? 'الحلويات والتسالي' : 'Sweets & Snacks', percentage: 12, sales: '$5,851' },
-    { name: locale === 'ar' ? 'التوابل والصلصات' : 'Spices & Sauces', percentage: 8, sales: '$3,900' },
-    { name: locale === 'ar' ? 'مستلزمات المنزل' : 'Household', percentage: 4, sales: '$1,950' },
-  ];
+  const [range, setRange] = useState<AnalyticsRange>('30d');
+  const [data, setData] = useState<AnalyticsSummary | null>(null);
+  const [lowStockItems, setLowStockItems] = useState<LowStockRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const topProducts = [
-    { name: locale === 'ar' ? 'قهوة تركية محمد أفندي بالهيل' : 'Mehmet Efendi Turkish Coffee with Cardamom', sales: '240 units', revenue: '$2,157' },
-    { name: locale === 'ar' ? 'شاي سيلان أسود الوزة - فرط' : 'Al-Wazah Ceylon Black Tea - Loose Leaf', sales: '185 units', revenue: '$1,293' },
-    { name: locale === 'ar' ? 'زعتر أخضر لبناني بالسمسم زياد' : 'Ziyad Lebanese Green Zaatar Thyme', sales: '142 units', revenue: '$992' },
-    { name: locale === 'ar' ? 'زيت زيتون بكر ممتاز زياد' : 'Ziyad Extra Virgin Olive Oil Palestinian', sales: '98 units', revenue: '$1,469' },
-  ];
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [summary, inventoryRes] = await Promise.all([
+        AnalyticsService.getSummary(range, locale),
+        ApiClient.get<{ data: LowStockRow[] }>('/admin/inventory', { params: { status: 'low_stock' } }, locale),
+      ]);
+      setData(summary);
+      setLowStockItems((inventoryRes.data || []).slice(0, 5));
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to load analytics.'));
+    } finally {
+      setLoading(false);
+    }
+  }, [range, locale]);
 
-  const lowStockItems = [
-    { name: locale === 'ar' ? 'هريسة حارة تونسية منارة كاب بون' : 'Le Phare du Cap Bon Tunisian Harissa Paste', stock: 12 },
-    { name: locale === 'ar' ? 'شراب رمان باربيكان (6 حبات)' : 'Barbican Pomegranate Malt Drink (6-Pack)', stock: 5 },
-    { name: locale === 'ar' ? 'تمر مجهول جامبو كاليفورنيا' : 'California Jumbo Medjool Dates', stock: 3 },
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  if (loading && !data) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="text-center py-20 space-y-3">
+        <AlertTriangle className="w-10 h-10 text-red-500 mx-auto" />
+        <p className="text-sm text-red-600 font-semibold">{error || 'No analytics data available.'}</p>
+        <button onClick={load} className="text-xs font-bold text-primary hover:underline">
+          {isAr ? 'إعادة المحاولة' : 'Try again'}
+        </button>
+      </div>
+    );
+  }
+
+  const maxTrend = Math.max(1, ...data.salesTrend.map((p) => p.total));
+  const statusEntries: [string, number][] = [
+    ['pending', data.orders.byStatus.pending],
+    ['processing', data.orders.byStatus.processing],
+    ['shipped', data.orders.byStatus.shipped],
+    ['delivered', data.orders.byStatus.delivered],
+    ['cancelled', data.orders.byStatus.cancelled],
   ];
+  const statusTotal = Math.max(1, statusEntries.reduce((sum, [, v]) => sum + v, 0));
 
   return (
-    <div className="space-y-8 fade-in text-xs" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
-      
-      {/* Overview stats */}
+    <div className="space-y-8 fade-in text-xs" dir={isAr ? 'rtl' : 'ltr'}>
+
+      {/* Range selector */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h2 className="text-sm font-bold text-primary uppercase tracking-wider">
+          {isAr ? 'التحليلات' : 'Analytics'}
+        </h2>
+        <div className="flex gap-1.5 bg-white border border-light-border rounded-lg p-1">
+          {RANGES.map((r) => (
+            <button
+              key={r.id}
+              onClick={() => setRange(r.id)}
+              className={`px-3 py-1.5 rounded-md font-bold transition-colors ${
+                range === r.id ? 'bg-primary text-cream' : 'text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              {isAr ? r.labelAr : r.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Overview stats — scoped to the selected range */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
         <div className="bg-white border border-light-border p-4 rounded-xl shadow-xs">
-          <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">
-            {locale === 'ar' ? 'إجمالي الإيرادات' : 'Total Revenue'}
+          <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1 flex items-center gap-1">
+            <DollarSign className="w-3 h-3 text-gold" />
+            {isAr ? 'مبيعات الفترة المحددة' : 'Revenue (selected range)'}
           </span>
-          <strong className="text-lg text-dark">$50,750.00</strong>
-          <span className="text-[10px] text-green-605 block pt-0.5 font-semibold">
-            {locale === 'ar' ? '▲ +12.4% هذا الشهر' : '▲ +12.4% this month'}
-          </span>
-        </div>
-        <div className="bg-white border border-light-border p-4 rounded-xl shadow-xs">
-          <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">
-            {locale === 'ar' ? 'إجمالي الطلبات' : 'Total Orders'}
-          </span>
-          <strong className="text-lg text-dark">793</strong>
-          <span className="text-[10px] text-green-605 block pt-0.5 font-semibold">
-            {locale === 'ar' ? '▲ +8.1% زيادة طلبات' : '▲ +8.1% order increase'}
+          <strong className="text-lg text-dark">{formatPrice(data.sales.rangeTotal, locale)}</strong>
+          <span className={`text-[10px] block pt-0.5 font-semibold ${data.sales.growth >= 0 ? 'text-green-605' : 'text-red-600'}`}>
+            {data.sales.growth >= 0 ? '▲' : '▼'} {Math.abs(data.sales.growth)}% {isAr ? 'مقابل الفترة السابقة' : 'vs previous period'}
           </span>
         </div>
         <div className="bg-white border border-light-border p-4 rounded-xl shadow-xs">
-          <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">
-            {locale === 'ar' ? 'متوسط قيمة الطلب (AOV)' : 'Average Order Value'}
+          <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1 flex items-center gap-1">
+            <ShoppingCart className="w-3 h-3 text-gold" />
+            {isAr ? 'الطلبات في الفترة' : 'Orders (selected range)'}
           </span>
-          <strong className="text-lg text-dark">$64.01</strong>
+          <strong className="text-lg text-dark">{data.orders.rangeTotal.toLocaleString()}</strong>
+          <span className={`text-[10px] block pt-0.5 font-semibold ${data.orders.growth >= 0 ? 'text-green-605' : 'text-red-600'}`}>
+            {data.orders.growth >= 0 ? '▲' : '▼'} {Math.abs(data.orders.growth)}% {isAr ? 'مقابل الفترة السابقة' : 'vs previous period'}
+          </span>
+        </div>
+        <div className="bg-white border border-light-border p-4 rounded-xl shadow-xs">
+          <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1 flex items-center gap-1">
+            <Users className="w-3 h-3 text-gold" />
+            {isAr ? 'عملاء جدد' : 'New Customers'}
+          </span>
+          <strong className="text-lg text-dark">{data.customers.new.toLocaleString()}</strong>
           <span className="text-[10px] text-gray-500 block pt-0.5">
-            {locale === 'ar' ? 'محسوب بناء على كل طلبات المتجر' : 'Calculated over all store orders'}
+            {data.customers.returning} {isAr ? 'عميل عائد في نفس الفترة' : 'returning in this period'}
           </span>
         </div>
         <div className="bg-white border border-light-border p-4 rounded-xl shadow-xs">
           <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">
-            {locale === 'ar' ? 'معدل التحويل (Conversion)' : 'Conversion Rate'}
+            {isAr ? 'إجمالي المبيعات (كل الأوقات)' : 'All-Time Revenue'}
           </span>
-          <strong className="text-lg text-dark">3.48%</strong>
-          <span className="text-[10px] text-green-605 block pt-0.5 font-semibold">
-            {locale === 'ar' ? '▲ +0.5% هذا الأسبوع' : '▲ +0.5% this week'}
+          <strong className="text-lg text-dark">{formatPrice(data.sales.allTime, locale)}</strong>
+          <span className="text-[10px] text-gray-500 block pt-0.5">
+            {isAr ? `اليوم: ${formatPrice(data.sales.today, locale)}` : `Today: ${formatPrice(data.sales.today, locale)}`}
           </span>
         </div>
+      </div>
+
+      {/* Sales trend */}
+      <div className="bg-white border border-light-border p-5 rounded-xl shadow-xs space-y-4">
+        <h3 className="font-bold text-sm text-primary uppercase tracking-wider border-b border-light-border pb-3 flex items-center gap-1.5">
+          <TrendingUp className="w-4.5 h-4.5 text-gold" />
+          <span>{isAr ? 'اتجاه المبيعات' : 'Sales Trend'}</span>
+        </h3>
+        {data.salesTrend.every((p) => p.total === 0) ? (
+          <p className="text-gray-400 text-center py-6">{isAr ? 'لا توجد مبيعات مدفوعة في هذه الفترة بعد.' : 'No paid sales in this period yet.'}</p>
+        ) : (
+          <div className="flex items-end gap-1 h-32 overflow-x-auto no-scrollbar">
+            {data.salesTrend.map((point, idx) => (
+              <div key={idx} className="flex-1 min-w-[6px] flex flex-col items-center justify-end h-full group relative">
+                <div
+                  className="w-full bg-primary/80 hover:bg-primary rounded-t transition-colors"
+                  style={{ height: `${Math.max(2, (point.total / maxTrend) * 100)}%` }}
+                  title={`${point.label}: ${formatPrice(point.total, locale)}`}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -78,84 +176,101 @@ export default function AdminAnalyticsPage() {
         <div className="bg-white border border-light-border p-5 rounded-xl shadow-xs space-y-4">
           <h3 className="font-bold text-sm text-primary uppercase tracking-wider border-b border-light-border pb-3 flex items-center gap-1.5">
             <BarChart3 className="w-4.5 h-4.5 text-gold" />
-            <span>{locale === 'ar' ? 'المبيعات حسب الأقسام الـ 6' : 'Best Selling Categories (6 Core)'}</span>
+            <span>{isAr ? 'المبيعات حسب القسم' : 'Revenue by Category'}</span>
           </h3>
 
-          <div className="space-y-4">
-            {categoriesPerformance.map((cat, idx) => (
-              <div key={idx} className="space-y-1.5">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold text-dark">{cat.name}</span>
-                  <span className="text-gray-500 font-semibold">{cat.sales} ({cat.percentage}%)</span>
+          {data.categoryBreakdown.length === 0 ? (
+            <p className="text-gray-400 text-center py-6">{isAr ? 'لا توجد بيانات مبيعات لهذه الفترة.' : 'No sales data for this period.'}</p>
+          ) : (
+            <div className="space-y-4">
+              {data.categoryBreakdown.map((cat, idx) => (
+                <div key={idx} className="space-y-1.5">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-bold text-dark">{cat.name}</span>
+                    <span className="text-gray-500 font-semibold">{formatPrice(cat.revenue, locale)} ({cat.percentage}%)</span>
+                  </div>
+                  <div className="w-full h-2 bg-gray-150 rounded-full overflow-hidden">
+                    <div className="h-full bg-primary rounded-full" style={{ width: `${cat.percentage}%` }} />
+                  </div>
                 </div>
-                {/* Progress bar */}
-                <div className="w-full h-2 bg-gray-150 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-primary rounded-full" 
-                    style={{ width: `${cat.percentage}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Top Selling Products */}
         <div className="bg-white border border-light-border p-5 rounded-xl shadow-xs space-y-4">
           <h3 className="font-bold text-sm text-primary uppercase tracking-wider border-b border-light-border pb-3 flex items-center gap-1.5">
             <TrendingUp className="w-4.5 h-4.5 text-gold" />
-            <span>{locale === 'ar' ? 'المنتجات الأكثر مبيعاً' : 'Top Products'}</span>
+            <span>{isAr ? 'المنتجات الأكثر مبيعاً' : 'Top Products'}</span>
           </h3>
 
-          <div className="divide-y divide-light-border">
-            {topProducts.map((p, idx) => (
-              <div key={idx} className="py-3 flex justify-between items-center first:pt-0 last:pb-0">
-                <div className="space-y-0.5">
-                  <strong className="text-dark block font-semibold">{p.name}</strong>
-                  <span className="text-[10px] text-gray-500">{p.sales} sold</span>
+          {data.products.bestSelling.length === 0 ? (
+            <p className="text-gray-400 text-center py-6">{isAr ? 'لا توجد مبيعات لهذه الفترة.' : 'No sales for this period.'}</p>
+          ) : (
+            <div className="divide-y divide-light-border">
+              {data.products.bestSelling.map((p) => (
+                <div key={p.id} className="py-3 flex justify-between items-center first:pt-0 last:pb-0">
+                  <div className="space-y-0.5">
+                    <strong className="text-dark block font-semibold">{isAr ? p.arabicName || p.name : p.name}</strong>
+                    <span className="text-[10px] text-gray-500">{p.sales} {isAr ? 'وحدة مباعة' : 'sold'}</span>
+                  </div>
+                  <strong className="text-primary font-bold">{formatPrice(p.revenue, locale)}</strong>
                 </div>
-                <strong className="text-primary font-bold">{p.revenue}</strong>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Inventory & Recent Order Notifications */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Low Stock Alerts */}
         <div className="bg-white border border-light-border p-5 rounded-xl shadow-xs space-y-4">
           <h3 className="font-bold text-sm text-primary uppercase tracking-wider border-b border-light-border pb-3 flex items-center gap-1.5">
             <AlertTriangle className="w-4.5 h-4.5 text-red-500" />
-            <span>{locale === 'ar' ? 'تنبيهات انخفاض المخزون' : 'Low Stock Alerts'}</span>
+            <span>{isAr ? 'تنبيهات المخزون' : 'Stock Alerts'}</span>
           </h3>
+          <div className="flex gap-4 text-[10px] font-bold text-gray-500 pb-2">
+            <span>{isAr ? 'منخفض:' : 'Low stock:'} <strong className="text-dark">{data.lowStock.count}</strong></span>
+            <span>{isAr ? 'نفد:' : 'Out of stock:'} <strong className="text-dark">{data.products.outOfStock}</strong></span>
+          </div>
+          {lowStockItems.length === 0 ? (
+            <p className="text-gray-400 text-center py-6">{isAr ? 'لا توجد تنبيهات مخزون حالياً.' : 'No stock alerts right now.'}</p>
+          ) : (
+            <div className="divide-y divide-light-border">
+              {lowStockItems.map((item) => (
+                <div key={item.id} className="py-3 flex justify-between items-center first:pt-0 last:pb-0">
+                  <span className="font-semibold text-dark">{isAr ? item.arabicName || item.name : item.name}</span>
+                  <span className="bg-red-50 text-red-700 font-bold border border-red-200 px-2 py-0.5 rounded text-[10px]">
+                    {item.stock} {isAr ? 'متبقي' : 'left'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-          <div className="divide-y divide-light-border">
-            {lowStockItems.map((item, idx) => (
-              <div key={idx} className="py-3 flex justify-between items-center first:pt-0 last:pb-0">
-                <span className="font-semibold text-dark">{item.name}</span>
-                <span className="bg-red-50 text-red-700 font-bold border border-red-200 px-2 py-0.5 rounded text-[10px]">
-                  {item.stock} items left
-                </span>
+        {/* Order status distribution */}
+        <div className="bg-white border border-light-border p-5 rounded-xl shadow-xs space-y-4">
+          <h3 className="font-bold text-sm text-primary uppercase tracking-wider border-b border-light-border pb-3 flex items-center gap-1.5">
+            <ShoppingCart className="w-4.5 h-4.5 text-gold" />
+            <span>{isAr ? 'حالة الطلبات في الفترة' : 'Order Status (selected range)'}</span>
+          </h3>
+          <div className="space-y-3">
+            {statusEntries.map(([status, count]) => (
+              <div key={status} className="space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className="font-bold text-dark capitalize">{status}</span>
+                  <span className="text-gray-500 font-semibold">{count}</span>
+                </div>
+                <div className="w-full h-1.5 bg-gray-150 rounded-full overflow-hidden">
+                  <div className="h-full bg-accent rounded-full" style={{ width: `${(count / statusTotal) * 100}%` }} />
+                </div>
               </div>
             ))}
           </div>
         </div>
-
-        {/* System Hearts/Averages */}
-        <div className="bg-white border border-light-border p-5 rounded-xl shadow-xs space-y-4">
-          <h3 className="font-bold text-sm text-primary uppercase tracking-wider border-b border-light-border pb-3 flex items-center gap-1.5">
-            <Clock className="w-4.5 h-4.5 text-gold" />
-            <span>{locale === 'ar' ? 'نشاط المبيعات الأخير' : 'Recent Order Frequency'}</span>
-          </h3>
-          <p className="text-gray-500 leading-relaxed">
-            {locale === 'ar' 
-              ? 'متوسط معدل دخول الطلبات الجديدة هو طلب واحد كل 24 دقيقة. مستويات المخزون وعمليات المزامنة مع مستودع الولايات المتحدة تعمل بشكل طبيعي وبدون مشاكل.' 
-              : 'Our average checkout processing rate is currently 1 new order every 24 minutes. US fulfillment warehouse synchronization is fully functional and operating within normal latency.'}
-          </p>
-        </div>
       </div>
-
     </div>
   );
 }

@@ -11,6 +11,12 @@ interface CartState {
   isZipChecked: boolean;
   isDeliveryAvailable: boolean;
   freeShippingThreshold: number;
+  // Real, admin-configured prices fetched from /checkout/shipping-rates —
+  // never hardcoded. Defaults here are only a pre-zip-check display fallback;
+  // the backend is always what actually gets charged (see
+  // OrderController::resolveShippingCost).
+  standardRate: number;
+  expressRate: number;
   
   addToCart: (product: Product, option: 'single' | 'pack' | 'case', quantity?: number) => Promise<void>;
   removeFromCart: (productId: string, option: 'single' | 'pack' | 'case') => Promise<void>;
@@ -40,6 +46,8 @@ export const useCartStore = create<CartState>()(
       isZipChecked: false,
       isDeliveryAvailable: false,
       freeShippingThreshold: 50,
+      standardRate: 7.99,
+      expressRate: 14.99,
 
       fetchServerCart: async () => {
         const token = typeof window !== 'undefined' ? localStorage.getItem('am_token') : null;
@@ -202,19 +210,21 @@ export const useCartStore = create<CartState>()(
         try {
           const res = await ApiClient.post<any>('/checkout/shipping-rates', { zip });
           const rates = res.rates || [];
-          const standard = rates.find((r: any) => r.id === 'standard')?.cost ?? 7.99;
-          const express = rates.find((r: any) => r.id === 'express')?.cost ?? 14.99;
+          const standard = Number(rates.find((r: any) => r.id === 'standard')?.cost ?? get().standardRate);
+          const express = Number(rates.find((r: any) => r.id === 'express')?.cost ?? get().expressRate);
 
           set({
             shippingZip: zip,
             isZipChecked: true,
             isDeliveryAvailable: true,
+            standardRate: standard,
+            expressRate: express,
           });
 
           return {
             available: true,
-            standardRate: Number(standard),
-            expressRate: Number(express),
+            standardRate: standard,
+            expressRate: express,
           };
         } catch (err) {
           set({ shippingZip: zip, isZipChecked: true, isDeliveryAvailable: false });
@@ -256,7 +266,7 @@ export const useCartStore = create<CartState>()(
           return 0;
         }
 
-        return get().shippingOption === 'express' ? 14.99 : 7.99;
+        return get().shippingOption === 'express' ? get().expressRate : get().standardRate;
       },
 
       getTotal: () => {

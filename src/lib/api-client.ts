@@ -43,6 +43,10 @@ export class ApiClient {
     if (!response.ok) {
       if (response.status === 401 && typeof window !== 'undefined') {
         localStorage.removeItem('am_token');
+        // Also drop the edge-routing cookie middleware.ts checks for /admin —
+        // an expired/invalid token shouldn't leave a stale "admin" cookie
+        // around letting the browser keep rendering the admin shell.
+        document.cookie = 'am_role=; path=/; max-age=0; SameSite=Lax';
         try {
           const { useAuthStore } = require('@/store/auth-store');
           useAuthStore.setState({ user: null, isAdmin: false, isAuthenticated: false });
@@ -104,6 +108,26 @@ export class ApiClient {
       headers: this.getHeaders(locale),
       body: body ? JSON.stringify(body) : undefined,
       ...options,
+    });
+    return this.handleResponse<T>(response);
+  }
+
+  // For multipart file uploads — never set Content-Type manually so the
+  // browser can attach the multipart boundary itself.
+  public static async postForm<T>(path: string, formData: FormData, locale: 'en' | 'ar' = 'en'): Promise<T> {
+    const url = this.buildUrl(path);
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+      'Accept-Language': locale,
+    };
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('am_token');
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
     });
     return this.handleResponse<T>(response);
   }

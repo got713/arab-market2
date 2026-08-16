@@ -14,6 +14,12 @@ export const CouponService = {
   validateCoupon: async (code: string, subtotal: number, locale: 'en' | 'ar' = 'en'): Promise<{
     valid: boolean;
     coupon: Coupon | null;
+    // The server's actual calculated discount for the given subtotal — use
+    // this for any customer-facing "you saved $X" message. Never derive that
+    // number from coupon.value/type client-side; that's only for the live
+    // cart-summary line, which the backend independently recomputes and
+    // enforces again at checkout (see OrderController::store).
+    discountAmount: number;
     error?: string;
   }> => {
     try {
@@ -34,12 +40,13 @@ export const CouponService = {
             maxUsage: 9999,
             usageCount: 0,
             active: true
-          }
+          },
+          discountAmount: Number(res.discount_amount) || 0,
         };
       }
-      return { valid: false, coupon: null, error: res.message };
+      return { valid: false, coupon: null, discountAmount: 0, error: res.message };
     } catch (err: any) {
-      return { valid: false, coupon: null, error: err.message || 'Invalid coupon.' };
+      return { valid: false, coupon: null, discountAmount: 0, error: err.message || 'Invalid coupon.' };
     }
   },
 

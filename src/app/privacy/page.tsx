@@ -35,7 +35,7 @@ export default function PrivacyPage() {
         <div className="space-y-2">
           <h2 className="text-base font-bold text-dark">4. Secure Payment Processing</h2>
           <p>
-            All payment gateway transactions are handled securely by PCI-compliant partners. For this functional demo session, card credentials are validated locally using simulated scripts, and no real monetary charges are executed.
+            All payment transactions are processed by Stripe, a PCI-compliant payment processor. Your card details are entered directly into Stripe&apos;s secure payment form and never pass through or are stored on our servers. An order is only confirmed as paid after Stripe verifies the transaction.
           </p>
         </div>
       </div>

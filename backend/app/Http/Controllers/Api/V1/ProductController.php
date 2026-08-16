@@ -9,6 +9,7 @@ use App\Models\Inventory;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -17,8 +18,13 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $includeInactive = $request->has('all') && $request->user()?->isAdmin();
-        
-        $query = Product::with(['images', 'inventory', 'category', 'subcategory']);
+
+        // 'reviews' is required here too — formatProductPayload() (shared with
+        // show()) reads $prod->reviews unconditionally. Without it, every
+        // paginated listing request (shop/home/search/category — all go
+        // through this endpoint) lazy-loads reviews once per product on the
+        // page, a real N+1.
+        $query = Product::with(['images', 'inventory', 'category', 'subcategory', 'reviews']);
 
         if (!$includeInactive) {
             $query->where('active', true);
@@ -137,6 +143,9 @@ class ProductController extends Controller
             'description' => 'required|string',
             'arabic_description' => 'required|string',
             'weight' => 'required|string|max:50',
+            // Deliberately just a label, not a conversion system — see the
+            // migration comment. Only two values are meaningful right now.
+            'selling_unit' => 'nullable|in:piece,carton',
             'ingredients' => 'nullable|string',
             'allergens' => 'nullable|string',
             'price' => 'required|numeric|min:0',
@@ -150,7 +159,12 @@ class ProductController extends Controller
             'active' => 'nullable|boolean',
             'stock' => 'required|integer|min:0',
             'low_stock_threshold' => 'nullable|integer|min:0',
-            'images' => 'required|array|min:1',
+            // Optional now — real product photos are uploaded afterwards via
+            // ProductImageController (multipart file upload), not pasted as
+            // URLs. This array is kept only as a legacy/API convenience path
+            // (e.g. quick seeding) for callers that still want to pass
+            // ready-made image URLs directly.
+            'images' => 'nullable|array',
             'images.*' => 'required|string|url',
         ]);
 
@@ -171,6 +185,7 @@ class ProductController extends Controller
             'description' => $request->description,
             'arabic_description' => $request->arabic_description,
             'weight' => $request->weight,
+            'selling_unit' => $request->selling_unit ?? 'piece',
             'ingredients' => $request->ingredients,
             'allergens' => $request->allergens,
             'price' => $request->price,
@@ -185,11 +200,14 @@ class ProductController extends Controller
             'rating' => 4.5,
         ]);
 
-        // Create main image and extra images
-        foreach ($request->images as $index => $url) {
+        // Legacy convenience path only — see the `images` validation comment
+        // above. The real admin flow uploads files afterwards via
+        // ProductImageController::store(), which is what sets sort_order/path.
+        foreach ($request->input('images', []) as $index => $url) {
             ProductImage::create([
                 'product_id' => $product->id,
                 'url' => $url,
+                'sort_order' => $index,
                 'is_main' => $index === 0,
             ]);
         }
@@ -219,6 +237,7 @@ class ProductController extends Controller
             'description' => 'required|string',
             'arabic_description' => 'required|string',
             'weight' => 'required|string|max:50',
+            'selling_unit' => 'nullable|in:piece,carton',
             'ingredients' => 'nullable|string',
             'allergens' => 'nullable|string',
             'price' => 'required|numeric|min:0',
@@ -232,8 +251,6 @@ class ProductController extends Controller
             'active' => 'nullable|boolean',
             'stock' => 'required|integer|min:0',
             'low_stock_threshold' => 'nullable|integer|min:0',
-            'images' => 'required|array|min:1',
-            'images.*' => 'required|string|url',
         ]);
 
         $slug = $request->slug ?: str($request->name)->slug();
@@ -253,6 +270,7 @@ class ProductController extends Controller
             'description' => $request->description,
             'arabic_description' => $request->arabic_description,
             'weight' => $request->weight,
+            'selling_unit' => $request->selling_unit ?? $product->selling_unit,
             'ingredients' => $request->ingredients,
             'allergens' => $request->allergens,
             'price' => $request->price,
@@ -266,15 +284,11 @@ class ProductController extends Controller
             'active' => $request->active ?? $product->active,
         ]);
 
-        // Sync images: Delete old ones and write new ones
-        $product->images()->delete();
-        foreach ($request->images as $index => $url) {
-            ProductImage::create([
-                'product_id' => $product->id,
-                'url' => $url,
-                'is_main' => $index === 0,
-            ]);
-        }
+        // Images are no longer touched here at all — they have their own
+        // lifecycle now via ProductImageController (upload/reorder/set
+        // primary/delete). The previous behavior (wipe + recreate every
+        // image row on every text-field edit) would have destroyed real
+        // uploaded files' database records on an unrelated price/stock edit.
 
         // Update inventory
         $inventory = Inventory::firstOrCreate(
@@ -292,6 +306,34 @@ class ProductController extends Controller
     public function destroy($id)
     {
         $product = Product::findOrFail($id);
+
+        // DECISION (Phase 4): a product that has ever been ordered must never
+        // be hard-deleted — an old order needs to keep displaying its product
+        // info forever, even after that product is retired from the catalog.
+        // The `order_items.product_id` foreign key is already declared
+        // `onDelete('restrict')` (see the ecommerce migration), so the
+        // database itself would refuse this at the SQL level either way —
+        // this check just turns that into a clean 400 with a clear message
+        // instead of a raw constraint-violation exception. "Deactivate"
+        // (PUT .../products/{id} with active=false, already supported) is the
+        // correct action for any product with order history; hard delete
+        // remains available only for products that were never actually sold
+        // (e.g. a test product created by mistake).
+        if ($product->orderItems()->exists()) {
+            return response()->json([
+                'message' => 'This product has order history and cannot be deleted. Use Deactivate instead to hide it from the storefront while preserving past orders.',
+            ], 400);
+        }
+
+        // Clean up any real uploaded files (not legacy external URLs, which
+        // have nothing local to remove) before the DB rows go away.
+        $disk = Storage::disk(config('filesystems.product_media_disk'));
+        foreach ($product->images as $image) {
+            if ($image->path) {
+                $disk->delete($image->path);
+            }
+        }
+
         $product->images()->delete();
         $product->inventory()->delete();
         $product->delete();
@@ -306,10 +348,23 @@ class ProductController extends Controller
     private function formatProductPayload($prod)
     {
         $mainImage = $prod->images->where('is_main', true)->first();
-        $imageUrls = $prod->images->sortByDesc('is_main')->pluck('url')->toArray();
+        // Primary image always first, then the rest in admin-controlled
+        // gallery order.
+        $sortedImages = $prod->images->sortBy([['is_main', 'desc'], ['sort_order', 'asc']])->values();
+        $imageUrls = $sortedImages->pluck('url')->toArray();
         if (empty($imageUrls)) {
             $imageUrls = ['https://placehold.co/400x400/FDF8F0/6B6355?text=No+Image'];
         }
+        // Richer per-image detail (id, primary flag, order) — the admin
+        // image manager needs real ids to delete/reorder/set-primary; the
+        // plain `images: string[]` above stays as-is for the storefront
+        // gallery, which only ever needed URLs.
+        $imageDetails = $sortedImages->map(fn ($img) => [
+            'id' => $img->id,
+            'url' => $img->url,
+            'isMain' => (bool) $img->is_main,
+            'sortOrder' => $img->sort_order,
+        ])->toArray();
 
         $stock = $prod->inventory ? $prod->inventory->stock_quantity : 0;
         $lowThreshold = $prod->inventory ? $prod->inventory->low_stock_threshold : 10;
@@ -323,11 +378,13 @@ class ProductController extends Controller
             'category' => $prod->category ? $prod->category->slug : '',
             'categoryId' => (string) $prod->category_id,
             'subcategoryId' => $prod->subcategory_id ? (string) $prod->subcategory_id : null,
+            'sellingUnit' => $prod->selling_unit ?: 'piece',
             'country' => $prod->country,
             'origin' => $prod->country,
             'description' => $prod->description,
             'arabicDescription' => $prod->arabic_description,
             'images' => $imageUrls,
+            'imageDetails' => $imageDetails,
             'rating' => (float) $prod->rating,
             'weight' => $prod->weight,
             'ingredients' => $prod->ingredients ?? '',
@@ -353,8 +410,12 @@ class ProductController extends Controller
                     'price' => (float) $prod->price,
                     'quantity' => 1,
                     'enabled' => true,
-                    'label' => 'Each',
-                    'labelAr' => 'حبة'
+                    // The single tier's label reflects the admin's chosen
+                    // selling unit (Piece vs Carton) — this is what actually
+                    // makes that choice visible to customers on the
+                    // storefront/cart/checkout, rather than a fixed "Each".
+                    'label' => $prod->selling_unit === 'carton' ? 'Carton' : 'Piece',
+                    'labelAr' => $prod->selling_unit === 'carton' ? 'كرتونة' : 'حبة',
                 ],
                 'pack' => [
                     'price' => $prod->pack_price ? (float) $prod->pack_price : (float) ($prod->price * $prod->pack_quantity * 0.90),

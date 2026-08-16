@@ -19,6 +19,15 @@ export interface ProductReview {
   date: string;
 }
 
+export type SellingUnit = 'piece' | 'carton';
+
+export interface ProductImageDetail {
+  id: number;
+  url: string;
+  isMain: boolean;
+  sortOrder: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -36,6 +45,8 @@ export interface Product {
   rating: number;
   reviews: ProductReview[];
   weight: string;
+  sellingUnit?: SellingUnit;
+  imageDetails?: ProductImageDetail[];
   ingredients: string;
   allergens: string;
   purchaseOptions: PurchaseOptions;
@@ -112,13 +123,15 @@ export interface Order {
 }
 
 export interface Customer {
-  id: string;
+  id: number;
   name: string;
   email: string;
+  phone?: string;
+  isActive: boolean;
   ordersCount: number;
   totalSpent: number;
-  lastOrderDate: string;
-  status: 'Active' | 'Inactive';
+  lastOrderAt: string | null;
+  createdAt: string;
 }
 
 export interface Coupon {

@@ -6,8 +6,6 @@ import { useRouter } from 'next/navigation';
 import { Product } from '@/types';
 import { ProductService } from '@/services/products';
 import { useLocaleStore } from '@/store/locale-store';
-import { useCartStore } from '@/store/cart-store';
-import { useAuthStore } from '@/store/auth-store';
 import ProductCard from '@/components/products/product-card';
 import { 
   ArrowRight, 
@@ -32,19 +30,15 @@ export default function HomePage() {
   
   const [bestSellers, setBestSellers] = useState<Product[]>([]);
   const [egyptianFavorites, setEgyptianFavorites] = useState<Product[]>([]);
-  const [buyAgainProducts, setBuyAgainProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [homeSearchQuery, setHomeSearchQuery] = useState('');
-
-  const { isAuthenticated, user } = useAuthStore();
-  const { getSubtotal } = useCartStore();
 
   useEffect(() => {
     const loadHomeData = async () => {
       setLoading(true);
       try {
         const allProds = await ProductService.getProducts(true);
-        
+
         // 1. Best Sellers: Products marked as bestSeller
         setBestSellers(allProds.filter((p) => p.bestSeller).slice(0, 6));
 
@@ -52,11 +46,6 @@ export default function HomePage() {
         setEgyptianFavorites(
           allProds.filter((p) => p.tags?.includes('Egyptian') || p.country?.toLowerCase() === 'egypt').slice(0, 6)
         );
-
-        // 3. Buy Again: Simulating prior orders loading
-        if (isAuthenticated) {
-          setBuyAgainProducts(allProds.slice(2, 6));
-        }
       } catch (err) {
         console.error('Failed to load homepage data:', err);
       } finally {
@@ -64,7 +53,7 @@ export default function HomePage() {
       }
     };
     loadHomeData();
-  }, [isAuthenticated]);
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

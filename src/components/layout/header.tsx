@@ -36,7 +36,7 @@ export default function Header() {
   const { locale, setLocale, t } = useLocaleStore();
   const { items: cartItems, shippingZip, isZipChecked, isDeliveryAvailable } = useCartStore();
   const { items: wishlistItems } = useWishlistStore();
-  const { user, isAdmin, isAuthenticated, loginCustomer, logout } = useAuthStore();
+  const { user, isAdmin, isAuthenticated, logout } = useAuthStore();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Product[]>([]);
@@ -115,28 +115,6 @@ export default function Header() {
     setIsSuggestOpen(false);
     router.push(`/product/${slug}`);
   };
-
-  const syncCartWithServer = useCartStore((state) => state.syncCartWithServer);
-
-  // Demo Login utility
-  const handleQuickLogin = async (role: 'customer' | 'admin') => {
-    try {
-      if (role === 'admin') {
-        await loginAdmin();
-        await syncCartWithServer();
-        router.push('/admin');
-      } else {
-        await loginCustomer();
-        await syncCartWithServer();
-        router.push('/account');
-      }
-    } catch (err) {
-      console.error(err);
-    }
-    setIsAccountMenuOpen(false);
-  };
-
-  const loginAdmin = useAuthStore((state) => state.loginAdmin);
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white border-b border-light-border shadow-xs">
@@ -318,39 +296,18 @@ export default function Header() {
                     </div>
                   </>
                 ) : (
-                  <>
-                    <div className="px-4 py-3 bg-[#FAF7F0] border-b border-light-border text-center">
-                      <span className="block text-[10px] text-muted-text font-bold uppercase tracking-wider mb-2">
-                        {locale === 'ar' ? 'دخول سريع تجريبي' : 'Demo Quick Logins'}
+                  <div className="p-1.5">
+                    <Link
+                      href="/account"
+                      onClick={() => setIsAccountMenuOpen(false)}
+                      className="flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold text-dark hover:bg-[#FAF7F0] rounded-lg transition-colors text-center"
+                    >
+                      <User className="w-4 h-4 text-gold" />
+                      <span className="font-cairo">
+                        {locale === 'ar' ? 'الذهاب لصفحة الدخول' : 'Go to Login Page'}
                       </span>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => handleQuickLogin('customer')}
-                          className="bg-primary hover:bg-primary-light text-white px-2 py-2 text-xs font-bold rounded-lg transition-colors font-cairo shadow-xs"
-                        >
-                          {locale === 'ar' ? 'حساب عميل' : 'Customer'}
-                        </button>
-                        <button
-                          onClick={() => handleQuickLogin('admin')}
-                          className="bg-gold hover:bg-gold-light text-dark px-2 py-2 text-xs font-bold rounded-lg transition-colors font-cairo shadow-xs"
-                        >
-                          {locale === 'ar' ? 'حساب مسؤول' : 'Admin'}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="p-1.5">
-                      <Link
-                        href="/account"
-                        onClick={() => setIsAccountMenuOpen(false)}
-                        className="flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold text-dark hover:bg-[#FAF7F0] rounded-lg transition-colors text-center"
-                      >
-                        <User className="w-4 h-4 text-gold" />
-                        <span className="font-cairo">
-                          {locale === 'ar' ? 'الذهاب لصفحة الدخول' : 'Go to Login Page'}
-                        </span>
-                      </Link>
-                    </div>
-                  </>
+                    </Link>
+                  </div>
                 )}
               </div>
             )}

@@ -37,12 +37,22 @@ function ShopContent() {
 
   const [categoriesList, setCategoriesList] = useState<Category[]>([]);
 
-  // Load products & categories on mount
+  // A subcategory link always carries its parent category too (see
+  // category/[slug]/page.tsx), so this is resolved server-side via
+  // ProductController's `subcategory` slug filter — not matched client-side
+  // against a subcategory id, which the product payload doesn't even expose.
+  const subcategoryParam = searchParams?.get('subcategory') || null;
+
+  // Load products & categories — scoped to the subcategory server-side when
+  // one is requested, so the rest of the client-side filter pipeline below
+  // (brand/price/halal/etc.) composes on top of an already-correct base set.
   useEffect(() => {
     const fetchAll = async () => {
+      setLoading(true);
       try {
+        const categoryParam = searchParams?.get('category');
         const [prodsList, catsList] = await Promise.all([
-          ProductService.getProducts(true),
+          ProductService.getProducts(true, subcategoryParam ? { subcategory: subcategoryParam, category: categoryParam || undefined } : undefined),
           CategoryService.getCategories(false), // only active
         ]);
         setAllProducts(prodsList);
@@ -54,7 +64,8 @@ function ShopContent() {
       }
     };
     fetchAll();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subcategoryParam]);
 
   // Sync category filter from URL search query if exists
   useEffect(() => {

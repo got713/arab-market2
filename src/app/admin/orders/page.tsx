@@ -45,14 +45,15 @@ export default function AdminOrdersPage() {
     }
   }, [orders, statusFilter]);
 
-  const handleStatusChange = async (orderId: string, status: Order['status']) => {
+  const handleStatusChange = async (orderDatabaseId: Order['databaseId'], status: Order['status']) => {
+    if (orderDatabaseId === undefined) return;
     try {
-      await OrderService.updateOrderStatus(orderId, status);
+      await OrderService.updateOrderStatus(orderDatabaseId, status);
       // Reload orders list
       const list = await OrderService.getOrders();
       setOrders(list);
       // If modal open, sync details
-      if (selectedOrder && selectedOrder.id === orderId) {
+      if (selectedOrder && selectedOrder.databaseId === orderDatabaseId) {
         setSelectedOrder((prev) => (prev ? { ...prev, status } : null));
       }
     } catch (err) {
@@ -155,7 +156,7 @@ export default function AdminOrdersPage() {
                     <td className="p-4">
                       <select
                         value={order.status}
-                        onChange={(e) => handleStatusChange(order.id, e.target.value as Order['status'])}
+                        onChange={(e) => handleStatusChange(order.databaseId, e.target.value as Order['status'])}
                         className="bg-gray-50 border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none"
                       >
                         <option value="Pending">{locale === 'ar' ? 'معلق' : 'Pending'}</option>
@@ -277,7 +278,7 @@ export default function AdminOrdersPage() {
                   <span className="text-gray-400 font-bold">{locale === 'ar' ? 'الحالة:' : 'Status:'}</span>
                   <select
                     value={selectedOrder.status}
-                    onChange={(e) => handleStatusChange(selectedOrder.id, e.target.value as Order['status'])}
+                    onChange={(e) => handleStatusChange(selectedOrder.databaseId, e.target.value as Order['status'])}
                     className="bg-gray-50 border border-gray-300 rounded px-2.5 py-1 text-xs focus:outline-none"
                   >
                     <option value="Pending">{locale === 'ar' ? 'معلق' : 'Pending'}</option>

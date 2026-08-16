@@ -159,9 +159,9 @@ export default function Footer() {
           </div>
           <div className="text-[10px] text-cream/40">
             {locale === 'ar' ? (
-              <span>هذا الموقع مجرد عرض تجريبي لمنصة عرب ماركت لتجارة المنتجات الغذائية الشرق أوسطية في أمريكا.</span>
+              <span>عرب ماركت — متجرك الإلكتروني للمنتجات الغذائية الشرق أوسطية في جميع أنحاء الولايات المتحدة.</span>
             ) : (
-              <span>This website is a functional MVP demo for Arab Market grocery e-commerce operations in the US.</span>
+              <span>Arab Market — your online grocery store for authentic Middle Eastern products, shipped across the United States.</span>
             )}
           </div>
         </div>

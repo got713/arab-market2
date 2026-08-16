@@ -17,6 +17,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Product Media Disk
+    |--------------------------------------------------------------------------
+    |
+    | Which disk (from "disks" below) product/category images are uploaded
+    | to. Defaults to the local "public" disk (served via `storage:link`).
+    | To move to S3/R2/etc later: point this at the "s3" disk below (already
+    | configured from AWS_* env vars) — no controller code changes needed,
+    | since ProductImageController always uploads through
+    | Storage::disk(config('filesystems.product_media_disk')).
+    |
+    */
+
+    'product_media_disk' => env('PRODUCT_MEDIA_DISK', 'public'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |

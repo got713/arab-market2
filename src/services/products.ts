@@ -1,4 +1,4 @@
-import { Product } from '../types';
+import { Product, ProductImageDetail } from '../types';
 import { ApiClient } from '../lib/api-client';
 
 export const ProductService = {
@@ -99,6 +99,7 @@ export const ProductService = {
       active: product.active,
       stock: product.stock || 0,
       images: product.images,
+      selling_unit: product.sellingUnit || 'piece',
     };
 
     return ApiClient.post<Product>('/admin/products', payload, undefined, locale);
@@ -129,18 +130,60 @@ export const ProductService = {
       active: product.active,
       stock: product.stock || 0,
       images: product.images,
+      selling_unit: product.sellingUnit || 'piece',
     };
 
     return ApiClient.put<Product>(`/admin/products/${product.id}`, payload, undefined, locale);
   },
 
-  deleteProduct: async (id: string, locale: 'en' | 'ar' = 'en'): Promise<boolean> => {
-    try {
-      await ApiClient.delete(`/admin/products/${id}`, undefined, locale);
-      return true;
-    } catch (err) {
-      console.error(err);
-      return false;
-    }
+  // Throws on failure (e.g. the product has order history and the backend
+  // refuses to hard-delete it) so the caller can show the real reason to
+  // the admin instead of failing silently.
+  deleteProduct: async (id: string, locale: 'en' | 'ar' = 'en'): Promise<void> => {
+    await ApiClient.delete(`/admin/products/${id}`, undefined, locale);
   },
 };
+
+interface RawProductImage {
+  id: number;
+  url: string;
+  is_main: boolean;
+  sort_order: number;
+}
+
+// Real file uploads for product images — separate from ProductService above
+// because images have their own lifecycle (see backend ProductImageController):
+// uploading/reordering/deleting an image is independent of saving the
+// product's text fields, and never touches the product's other data.
+export const ProductImageService = {
+  upload: async (productId: string, files: File[], locale: 'en' | 'ar' = 'en'): Promise<ProductImageDetail[]> => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('images[]', file));
+    const res = await ApiClient.postForm<{ images: RawProductImage[] }>(`/admin/products/${productId}/images`, formData, locale);
+    return res.images.map(mapImage);
+  },
+
+  setPrimary: async (productId: string, imageId: number, locale: 'en' | 'ar' = 'en'): Promise<ProductImageDetail[]> => {
+    const res = await ApiClient.put<{ images: RawProductImage[] }>(`/admin/products/${productId}/images/${imageId}/primary`, {}, undefined, locale);
+    return res.images.map(mapImage);
+  },
+
+  reorder: async (productId: string, imageIds: number[], locale: 'en' | 'ar' = 'en'): Promise<ProductImageDetail[]> => {
+    const res = await ApiClient.post<{ images: RawProductImage[] }>(`/admin/products/${productId}/images/reorder`, { image_ids: imageIds }, undefined, locale);
+    return res.images.map(mapImage);
+  },
+
+  remove: async (productId: string, imageId: number, locale: 'en' | 'ar' = 'en'): Promise<ProductImageDetail[]> => {
+    const res = await ApiClient.delete<{ images: RawProductImage[] }>(`/admin/products/${productId}/images/${imageId}`, undefined, locale);
+    return res.images.map(mapImage);
+  },
+};
+
+function mapImage(raw: RawProductImage): ProductImageDetail {
+  return {
+    id: raw.id,
+    url: raw.url,
+    isMain: !!raw.is_main,
+    sortOrder: raw.sort_order ?? 0,
+  };
+}

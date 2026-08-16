@@ -26,14 +26,14 @@ import {
   ChevronDown,
   Store,
   MessageSquare,
-  Search
+  CreditCard
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { locale } = useLocaleStore();
-  const { user, isAdmin, isAuthenticated, loginAdmin, logout } = useAuthStore();
+  const { user, isAdmin, isAuthenticated, logout } = useAuthStore();
   
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -54,6 +54,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: locale === 'ar' ? 'المخزون' : 'Inventory', path: '/admin/inventory', icon: Warehouse },
     { label: locale === 'ar' ? 'الكوبونات' : 'Coupons', path: '/admin/coupons', icon: Ticket },
     { label: locale === 'ar' ? 'التحليلات' : 'Analytics', path: '/admin/analytics', icon: BarChart3 },
+    { label: locale === 'ar' ? 'إعدادات الدفع' : 'Payment Settings', path: '/admin/payment-settings', icon: CreditCard },
     { label: locale === 'ar' ? 'التقييمات' : 'Reviews', path: '/admin/settings?tab=reviews', icon: MessageSquare },
     { label: locale === 'ar' ? 'الإشعارات' : 'Notifications', path: '/admin/settings?tab=notifications', icon: Bell },
     { label: locale === 'ar' ? 'الإعدادات' : 'Settings', path: '/admin/settings', icon: Settings },
@@ -85,16 +86,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
 
           <div className="space-y-3 pt-2">
-            <button
-              onClick={() => {
-                loginAdmin();
-                router.refresh();
-              }}
+            <Link
+              href="/account?redirect=/admin"
               className="w-full py-2.5 bg-primary hover:bg-primary-light text-white rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5 min-h-[44px]"
             >
               <UserCheck className="w-4 h-4 text-gold" />
-              <span>{locale === 'ar' ? 'دخول تجريبي سريع: كمسؤول للنظام' : 'Demo Bypass: Login as Admin'}</span>
-            </button>
+              <span>{locale === 'ar' ? 'تسجيل الدخول بحساب المسؤول' : 'Sign In as Administrator'}</span>
+            </Link>
 
             <Link
               href="/"
@@ -198,16 +196,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Search inputs (mock search) */}
-            <div className="hidden md:flex items-center bg-[#FAF7F0] border border-light-border rounded-lg px-2.5 py-1.5 w-60">
-              <Search className="w-3.5 h-3.5 text-muted-text mr-2 rtl:ml-2 rtl:mr-0 shrink-0" />
-              <input 
-                type="text" 
-                placeholder={locale === 'ar' ? 'ابحث هنا...' : 'Search anything...'} 
-                className="w-full text-xs bg-transparent focus:outline-none placeholder-muted-text font-medium"
-              />
-            </div>
-
             {/* Language switcher */}
             <button
               onClick={() => router.push('/')}

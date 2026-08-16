@@ -117,11 +117,11 @@ export const translations: TranslationDictionary = {
   'checkout.state': { en: 'State', ar: 'الولاية' },
   'checkout.zip': { en: 'ZIP Code', ar: 'الرمز البريدي' },
   'checkout.delivery_method': { en: 'Delivery Method', ar: 'طريقة التوصيل' },
-  'checkout.payment': { en: 'Payment Information (Demo)', ar: 'بيانات الدفع (تجريبية)' },
+  'checkout.payment': { en: 'Payment Information', ar: 'بيانات الدفع' },
   'checkout.card_number': { en: 'Card Number', ar: 'رقم البطاقة' },
   'checkout.card_expiry': { en: 'Expiration Date (MM/YY)', ar: 'تاريخ الانتهاء (شهر/سنة)' },
   'checkout.card_cvc': { en: 'CVC / CVV', ar: 'الكود الأمني (CVC)' },
-  'checkout.place_order': { en: 'Place Demo Order', ar: 'إتمام الطلب التجريبي' },
+  'checkout.place_order': { en: 'Place Order', ar: 'إتمام الطلب' },
   'checkout.coupon_code': { en: 'Coupon Code', ar: 'كود الخصم' },
   'checkout.apply_coupon': { en: 'Apply', ar: 'تطبيق' },
 

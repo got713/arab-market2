@@ -160,7 +160,10 @@ class CartController extends Controller
 
     private function formatCart($cart)
     {
-        $items = $cart->items()->with('product.images')->get()->map(function ($item) {
+        // 'product.inventory' is required too — the map below reads
+        // $prod->inventory->stock_quantity for every item; without it that's
+        // a lazy-loaded query per cart line.
+        $items = $cart->items()->with(['product.images', 'product.inventory'])->get()->map(function ($item) {
             $prod = $item->product;
             $imageUrl = $prod->images->where('is_main', true)->first()?->url ?: 'https://placehold.co/400x400/FDF8F0/6B6355?text=No+Image';
 

@@ -10,11 +10,15 @@ class ProductImage extends Model
     protected $fillable = [
         'product_id',
         'url',
+        'path',
+        'original_name',
+        'sort_order',
         'is_main',
     ];
 
     protected $casts = [
         'is_main' => 'boolean',
+        'sort_order' => 'integer',
     ];
 
     public function product(): BelongsTo

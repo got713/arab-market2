@@ -20,6 +20,7 @@ class Product extends Model
         'description',
         'arabic_description',
         'weight',
+        'selling_unit',
         'ingredients',
         'allergens',
         'price',
@@ -76,5 +77,10 @@ class Product extends Model
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class)->where('status', 'approved');
+    }
+
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
     }
 }

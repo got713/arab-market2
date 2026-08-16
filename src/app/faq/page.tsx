@@ -34,7 +34,7 @@ export default function FaqPage() {
     },
     {
       q: 'Can I track my shipment in real-time?',
-      a: 'Yes. Once you complete your checkout, you will receive a mock order ID (e.g., AM-10482). You can enter this ID in the "Track Order" page to inspect the shipping timeline (Pending ➔ Processing ➔ Shipped ➔ Out for Delivery ➔ Delivered).'
+      a: 'Yes. Once your payment is confirmed, you\'ll receive a real order number (e.g., AM-10482). You can enter this ID together with the email used on the order on the "Track Order" page to see the shipping timeline (Pending ➔ Processing ➔ Shipped ➔ Out for Delivery ➔ Delivered).'
     },
     {
       q: 'Do you offer commercial accounts for restaurants?',

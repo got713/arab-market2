@@ -14,7 +14,7 @@ export default function TermsPage() {
         <div className="space-y-2">
           <h2 className="text-base font-bold text-dark">1. Agreement to Terms</h2>
           <p>
-            By accessing the Arab Market storefront or making demo transactions, you agree to comply with and be bound by these Terms of Service. These terms constitute a legally binding agreement between you and Arab Market LLC.
+            By accessing the Arab Market storefront or placing an order, you agree to comply with and be bound by these Terms of Service. These terms constitute a legally binding agreement between you and Arab Market LLC.
           </p>
         </div>
 
@@ -33,9 +33,9 @@ export default function TermsPage() {
         </div>
 
         <div className="space-y-2">
-          <h2 className="text-base font-bold text-dark">4. Mock / Demo Scope</h2>
+          <h2 className="text-base font-bold text-dark">4. Payments</h2>
           <p>
-            This website represents a functional e-commerce frontend MVP. Payment card transactions, shipping courier updates, and admin dashboards are simulated for demonstration purposes. No real monetary transactions or shipments occur.
+            Payment card transactions are processed securely by Stripe. An order is marked as paid only once Stripe confirms the charge has succeeded; if a payment fails or is declined, the order remains unpaid and no charge is made.
           </p>
         </div>
       </div>

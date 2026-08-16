@@ -16,12 +16,29 @@ interface AuthState {
   user: UserProfile | null;
   isAdmin: boolean;
   isAuthenticated: boolean;
-  loginCustomer: (email?: string, name?: string) => Promise<void>;
-  loginAdmin: () => Promise<void>;
   loginWithCredentials: (email: string, password: string) => Promise<void>;
   registerCustomer: (name: string, email: string, password: string, passwordConfirmation: string, phone?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (profile: Partial<UserProfile> & { password?: string; password_confirmation?: string }) => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<string>;
+  resetPassword: (token: string, email: string, password: string, passwordConfirmation: string) => Promise<string>;
+}
+
+// Non-secret routing hint only — NOT a session or an authorization decision.
+// middleware.ts reads this to decide whether to even render the /admin bundle
+// for a given request; the real authorization boundary is the Sanctum bearer
+// token (kept in localStorage, sent as an Authorization header) which the
+// Laravel backend independently verifies + checks the admin-access Gate on
+// every actual admin API call. Forging this cookie gets someone an empty
+// admin shell with no data, since every request it makes still needs a real
+// token the backend actually issued.
+function setEdgeRoleCookie(role: 'admin' | 'customer' | null) {
+  if (typeof document === 'undefined') return;
+  if (!role) {
+    document.cookie = 'am_role=; path=/; max-age=0; SameSite=Lax';
+    return;
+  }
+  document.cookie = `am_role=${role}; path=/; max-age=86400; SameSite=Lax`;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -31,22 +48,13 @@ export const useAuthStore = create<AuthState>()(
       isAdmin: false,
       isAuthenticated: false,
 
-      loginCustomer: async (email = 'ahmed.masri@gmail.com', name) => {
-        // Automatically login with seeded customer test account
-        await get().loginWithCredentials(email, 'customer123');
-      },
-
-      loginAdmin: async () => {
-        // Automatically login with seeded admin test account
-        await get().loginWithCredentials('admin@arabmarket.com', 'admin123');
-      },
-
       loginWithCredentials: async (email, password) => {
         try {
           const res = await ApiClient.post<any>('/auth/login', { email, password });
           if (res.access_token) {
             localStorage.setItem('am_token', res.access_token);
             const user = res.user;
+            setEdgeRoleCookie(user.role === 'admin' ? 'admin' : 'customer');
             set({
               user: {
                 name: user.name,
@@ -74,6 +82,7 @@ export const useAuthStore = create<AuthState>()(
           if (res.access_token) {
             localStorage.setItem('am_token', res.access_token);
             const user = res.user;
+            setEdgeRoleCookie(user.role === 'admin' ? 'admin' : 'customer');
             set({
               user: {
                 name: user.name,
@@ -96,6 +105,7 @@ export const useAuthStore = create<AuthState>()(
           // Token might already be expired
         }
         localStorage.removeItem('am_token');
+        setEdgeRoleCookie(null);
         set({
           user: null,
           isAdmin: false,
@@ -125,6 +135,28 @@ export const useAuthStore = create<AuthState>()(
           });
         } catch (err: any) {
           throw new Error(err.message || 'Failed to update profile.');
+        }
+      },
+
+      requestPasswordReset: async (email) => {
+        // Always returns the backend's generic message (see
+        // AuthController::forgotPassword) — this call intentionally cannot
+        // reveal whether the email has an account.
+        const res = await ApiClient.post<any>('/auth/forgot-password', { email });
+        return res.message as string;
+      },
+
+      resetPassword: async (token, email, password, passwordConfirmation) => {
+        try {
+          const res = await ApiClient.post<any>('/auth/reset-password', {
+            token,
+            email,
+            password,
+            password_confirmation: passwordConfirmation,
+          });
+          return res.message as string;
+        } catch (err: any) {
+          throw new Error(err.message || 'Failed to reset password.');
         }
       },
     }),

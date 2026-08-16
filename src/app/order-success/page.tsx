@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Order } from '@/types';
 import { OrderService } from '@/services/orders';
 import { useLocaleStore } from '@/store/locale-store';
-import { formatDate, formatPrice } from '@/lib/utils';
+import { formatDate, formatPrice, getPurchaseOptionLabel } from '@/lib/utils';
 import { CheckCircle2, ChevronRight, ShoppingBag, Truck } from 'lucide-react';
 import Link from 'next/link';
 
@@ -16,15 +16,19 @@ function OrderSuccessContent() {
   const searchParams = useSearchParams();
   const { t, locale } = useLocaleStore();
   const id = searchParams?.get('id') || '';
+  const email = searchParams?.get('email') || '';
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !email) {
+      setLoading(false);
+      return;
+    }
     const fetchOrder = async () => {
       try {
-        const o = await OrderService.getOrderById(id);
+        const o = await OrderService.getOrderById(id, email);
         setOrder(o);
       } catch (err) {
         console.error(err);
@@ -33,7 +37,7 @@ function OrderSuccessContent() {
       }
     };
     fetchOrder();
-  }, [id]);
+  }, [id, email]);
 
   if (loading) {
     return (
@@ -122,7 +126,7 @@ function OrderSuccessContent() {
                       {locale === 'ar' ? item.product.arabicName : item.product.name}
                     </span>
                     <span className="text-xs text-gray-500">
-                      {item.quantity} x {t(`prod.${item.option}`)}
+                      {item.quantity} x {getPurchaseOptionLabel(item.product.purchaseOptions, item.option, locale, item.product.sellingUnit)}
                     </span>
                   </div>
                   <span className="font-bold text-primary">
@@ -174,7 +178,7 @@ function OrderSuccessContent() {
       {/* Buttons */}
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
         <Link
-          href={`/track-order?id=${order.id}`}
+          href={`/track-order?id=${order.id}&email=${encodeURIComponent(order.customer.email)}`}
           className="px-8 py-3.5 bg-primary hover:bg-primary-dark text-cream font-bold rounded-lg text-sm text-center shadow-md transition-colors"
         >
           {t('order.track_btn')}

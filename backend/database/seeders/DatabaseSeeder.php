@@ -22,10 +22,34 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // ── 1. SEED USERS ────────────────────────────────────────────────────
+        //
+        // 'admin123'/'customer123' below are DEVELOPMENT-ONLY convenience
+        // credentials for local demo/testing — never real production passwords.
+        // Outside local/testing this seeder refuses to use them: it generates a
+        // random password instead (or uses SEED_ADMIN_PASSWORD /
+        // SEED_CUSTOMER_PASSWORD from .env if explicitly provided), and prints
+        // whatever it generated once so it can be rotated immediately.
+        $isLocal = app()->environment(['local', 'testing']);
+
+        $adminPassword = $isLocal
+            ? 'admin123'
+            : (env('SEED_ADMIN_PASSWORD') ?: Str::random(24));
+
+        $customerPassword = $isLocal
+            ? 'customer123'
+            : (env('SEED_CUSTOMER_PASSWORD') ?: Str::random(24));
+
+        if (!$isLocal) {
+            $this->command?->warn('Non-local environment detected — seeding with a generated (not hardcoded) admin/customer password.');
+            $this->command?->line("Seeded admin password:    {$adminPassword}");
+            $this->command?->line("Seeded customer password: {$customerPassword}");
+            $this->command?->warn('Rotate these immediately after first login. Set SEED_ADMIN_PASSWORD / SEED_CUSTOMER_PASSWORD in .env to control them explicitly instead.');
+        }
+
         $admin = User::create([
             'name' => 'Administrator',
             'email' => 'admin@arabmarket.com',
-            'password' => Hash::make('admin123'),
+            'password' => Hash::make($adminPassword),
             'role' => 'admin',
             'phone' => '+15550199',
         ]);
@@ -33,7 +57,7 @@ class DatabaseSeeder extends Seeder
         $customer = User::create([
             'name' => 'Ahmed Al-Masri',
             'email' => 'ahmed.masri@gmail.com',
-            'password' => Hash::make('customer123'),
+            'password' => Hash::make($customerPassword),
             'role' => 'customer',
             'phone' => '+1234567890',
         ]);
@@ -445,7 +469,7 @@ class DatabaseSeeder extends Seeder
                 'customer_name' => 'Ahmed Al-Masri',
                 'customer_email' => 'ahmed.masri@gmail.com',
                 'payment_status' => 'paid',
-                'status' => 'Processing',
+                'status' => 'processing',
                 'items' => [
                     ['qty' => 2, 'option' => 'single'],
                     ['qty' => 1, 'option' => 'pack']
@@ -456,7 +480,7 @@ class DatabaseSeeder extends Seeder
                 'customer_name' => 'Fatima Hassan',
                 'customer_email' => 'fatima.h@yahoo.com',
                 'payment_status' => 'paid',
-                'status' => 'Pending',
+                'status' => 'pending',
                 'items' => [
                     ['qty' => 1, 'option' => 'single']
                 ]
@@ -466,7 +490,7 @@ class DatabaseSeeder extends Seeder
                 'customer_name' => 'John Smith',
                 'customer_email' => 'jsmith@outlook.com',
                 'payment_status' => 'paid',
-                'status' => 'Shipped',
+                'status' => 'shipped',
                 'items' => [
                     ['qty' => 3, 'option' => 'single']
                 ]
@@ -476,7 +500,7 @@ class DatabaseSeeder extends Seeder
                 'customer_name' => 'Youssef Mansour',
                 'customer_email' => 'youssef.m@gmail.com',
                 'payment_status' => 'paid',
-                'status' => 'Delivered',
+                'status' => 'delivered',
                 'items' => [
                     ['qty' => 1, 'option' => 'case']
                 ]
@@ -486,7 +510,7 @@ class DatabaseSeeder extends Seeder
                 'customer_name' => 'Sarah Connor',
                 'customer_email' => 'sconnor@skynet.com',
                 'payment_status' => 'paid',
-                'status' => 'Delivered',
+                'status' => 'delivered',
                 'items' => [
                     ['qty' => 2, 'option' => 'single']
                 ]
@@ -496,7 +520,7 @@ class DatabaseSeeder extends Seeder
                 'customer_name' => 'Ali Raza',
                 'customer_email' => 'aliraza@msn.com',
                 'payment_status' => 'failed',
-                'status' => 'Cancelled',
+                'status' => 'cancelled',
                 'items' => [
                     ['qty' => 1, 'option' => 'pack']
                 ]
@@ -506,7 +530,7 @@ class DatabaseSeeder extends Seeder
                 'customer_name' => 'Mustafa Al-Sayed',
                 'customer_email' => 'mustafa.s@live.com',
                 'payment_status' => 'paid',
-                'status' => 'Delivered',
+                'status' => 'delivered',
                 'items' => [
                     ['qty' => 4, 'option' => 'single']
                 ]
@@ -516,7 +540,7 @@ class DatabaseSeeder extends Seeder
                 'customer_name' => 'Layla Kanaan',
                 'customer_email' => 'layla.k@gmail.com',
                 'payment_status' => 'paid',
-                'status' => 'Delivered',
+                'status' => 'delivered',
                 'items' => [
                     ['qty' => 1, 'option' => 'pack'],
                     ['qty' => 2, 'option' => 'single']

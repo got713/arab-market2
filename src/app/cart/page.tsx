@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/store/cart-store';
 import { useLocaleStore } from '@/store/locale-store';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, getPurchaseOptionLabel } from '@/lib/utils';
 import { CouponService } from '@/services/coupons';
 import { ProductService } from '@/services/products';
 import { Product } from '@/types';
@@ -45,26 +45,33 @@ export default function CartPage() {
   const [couponError, setCouponError] = useState('');
   const [couponSuccess, setCouponSuccess] = useState(appliedCoupon ? 'Coupon applied successfully!' : '');
   const [zipInput, setZipInput] = useState(shippingZip || '');
-  const [recommendations, setRecommendations] = useState<Product[]>([]);
+  const [catalog, setCatalog] = useState<Product[]>([]);
 
   const subtotal = getSubtotal();
   const discount = getDiscountAmount();
   const shipping = getShippingCost();
   const total = getTotal();
 
+  // Fetched once — recommendations are then just a client-side filter over
+  // this list, so adding/removing/changing quantity in the cart (which
+  // changes `items` on every keystroke of the qty stepper) no longer
+  // re-fetches the entire product catalog from the network each time.
   useEffect(() => {
-    const loadRecommendations = async () => {
+    const loadCatalog = async () => {
       try {
         const all = await ProductService.getProducts();
-        const currentIds = items.map(item => item.product.id);
-        const filtered = all.filter(p => !currentIds.includes(p.id));
-        setRecommendations(filtered.slice(0, 4));
+        setCatalog(all);
       } catch (err) {
         console.error('Error loading recommendations', err);
       }
     };
-    loadRecommendations();
-  }, [items]);
+    loadCatalog();
+  }, []);
+
+  const recommendations = useMemo(() => {
+    const currentIds = items.map((item) => item.product.id);
+    return catalog.filter((p) => !currentIds.includes(p.id)).slice(0, 4);
+  }, [catalog, items]);
 
   const handleQtyChange = (productId: string, option: 'single' | 'pack' | 'case', currentQty: number, change: number) => {
     updateQuantity(productId, option, currentQty + change);
@@ -84,7 +91,13 @@ export default function CartPage() {
       const res = await CouponService.validateCoupon(couponCode, subtotal);
       if (res.valid && res.coupon) {
         applyCoupon(res.coupon);
-        setCouponSuccess(`Success! ${res.coupon.discountPercent}% off applied.`);
+        // Always the server's actual calculated discount for this subtotal —
+        // never a client-derived percentage, so this can't render "undefined%".
+        setCouponSuccess(
+          locale === 'ar'
+            ? `تم التطبيق بنجاح! وفرت ${formatPrice(res.discountAmount, locale)}.`
+            : `Success! You saved ${formatPrice(res.discountAmount, locale)}.`
+        );
       } else {
         setCouponError(res.error || 'Invalid coupon.');
         applyCoupon(null);
@@ -172,7 +185,7 @@ export default function CartPage() {
                           </Link>
                           <div className="flex flex-wrap items-center gap-2 text-xs">
                             <span className="bg-cream border border-gold/20 px-2 py-0.5 rounded-md font-semibold text-primary uppercase text-[10px]">
-                              {t(`prod.${item.option}`)}
+                              {getPurchaseOptionLabel(item.product.purchaseOptions, item.option, locale, item.product.sellingUnit)}
                             </span>
                             <span className="text-gray-400">
                               {formatPrice(itemPrice, locale)} / unit

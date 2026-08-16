@@ -2,7 +2,9 @@
 
 import React, { useState } from 'react';
 import { useLocaleStore } from '@/store/locale-store';
-import { Mail, Phone, MapPin, Send, CheckCircle2 } from 'lucide-react';
+import { ContactService } from '@/services/contact';
+import { getErrorMessage } from '@/lib/utils';
+import { Mail, Phone, MapPin, Send, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
 
 export default function ContactPage() {
   const { t, locale } = useLocaleStore();
@@ -11,18 +13,28 @@ export default function ContactPage() {
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (name && email && message) {
+    if (!name || !email || !message) return;
+
+    setSending(true);
+    setError('');
+    try {
+      // Only shown once the backend has actually stored the message — not on
+      // form submit itself.
+      await ContactService.send({ name, email, subject, message }, locale);
       setSubmitted(true);
-      setTimeout(() => {
-        setSubmitted(false);
-        setName('');
-        setEmail('');
-        setSubject('');
-        setMessage('');
-      }, 3000);
+      setName('');
+      setEmail('');
+      setSubject('');
+      setMessage('');
+    } catch (err) {
+      setError(getErrorMessage(err, locale === 'ar' ? 'تعذر إرسال رسالتك. برجاء المحاولة مرة أخرى.' : 'Could not send your message. Please try again.'));
+    } finally {
+      setSending(false);
     }
   };
 
@@ -75,12 +87,20 @@ export default function ContactPage() {
         {/* Form Column */}
         <div className="md:col-span-2 bg-white border border-light-border p-6 rounded-xl shadow-xs">
           {submitted ? (
-            <div className="text-center py-10 space-y-3">
+            <div className="text-center py-10 space-y-4">
               <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto" />
-              <h3 className="font-bold text-sm text-dark">Message Sent Successfully!</h3>
-              <p className="text-xs text-gray-500 max-w-xs mx-auto">
-                Thank you for contacting Arab Market support. A customer agent will reply shortly.
-              </p>
+              <div className="space-y-1">
+                <h3 className="font-bold text-sm text-dark">Message Sent Successfully!</h3>
+                <p className="text-xs text-gray-500 max-w-xs mx-auto">
+                  Thank you for contacting Arab Market support. A customer agent will reply shortly.
+                </p>
+              </div>
+              <button
+                onClick={() => setSubmitted(false)}
+                className="text-xs font-bold text-primary hover:underline"
+              >
+                Send another message
+              </button>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -130,12 +150,31 @@ export default function ContactPage() {
                 />
               </div>
 
+              {error && (
+                <p className="text-xs text-red-600 font-semibold bg-red-50 border border-red-200 p-2.5 rounded-lg flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{error}</span>
+                </p>
+              )}
+
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-primary hover:bg-primary-dark text-cream text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5"
+                disabled={sending}
+                className={`px-6 py-2.5 text-cream text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 ${
+                  sending ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-primary-dark'
+                }`}
               >
-                <Send className="w-3.5 h-3.5" />
-                <span>Send Support Request</span>
+                {sending ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Sending...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Send Support Request</span>
+                  </>
+                )}
               </button>
             </form>
           )}

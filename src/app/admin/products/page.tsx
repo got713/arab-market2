@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Product, PurchaseOptions, Category } from '@/types';
-import { ProductService } from '@/services/products';
+import React, { useState, useEffect, useRef } from 'react';
+import { Product, PurchaseOptions, Category, SellingUnit, ProductImageDetail } from '@/types';
+import { ProductService, ProductImageService } from '@/services/products';
 import { CategoryService } from '@/services/categories';
 import { formatPrice, translateCountry } from '@/lib/utils';
 import { useLocaleStore } from '@/store/locale-store';
-import { Plus, Edit, Trash2, X, ToggleLeft, ToggleRight, Package, PackageCheck } from 'lucide-react';
+import { Plus, Edit, Trash2, X, ToggleLeft, ToggleRight, Package, PackageCheck, Upload, Star, ArrowLeft, ArrowRight, ImageOff } from 'lucide-react';
 
 // ── Default option labels ────────────────────────────────────────────────────
 const DEFAULT_LABELS = {
@@ -41,6 +41,7 @@ export default function AdminProductsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [saveError, setSaveError] = useState('');
+  const [deleteError, setDeleteError] = useState('');
 
   // ── Form fields ────────────────────────────────────────────────────────────
   const [name, setName]                         = useState('');
@@ -52,7 +53,7 @@ export default function AdminProductsPage() {
   const [country, setCountry]                   = useState('Egypt');
   const [description, setDescription]           = useState('');
   const [arabicDescription, setArabicDescription] = useState('');
-  const [imageUrl, setImageUrl]                 = useState('');
+  const [sellingUnit, setSellingUnit]           = useState<SellingUnit>('piece');
   const [weight, setWeight]                     = useState('');
   const [ingredients, setIngredients]           = useState('');
   const [allergens, setAllergens]               = useState('');
@@ -66,6 +67,12 @@ export default function AdminProductsPage() {
   const [singleOpt, setSingleOpt] = useState<OptionState>(defaultOption('single'));
   const [packOpt,   setPackOpt]   = useState<OptionState>(defaultOption('pack'));
   const [caseOpt,   setCaseOpt]   = useState<OptionState>(defaultOption('case'));
+
+  // ── Image management state (real uploads, independent lifecycle) ──────────
+  const [productImages, setProductImages] = useState<ProductImageDetail[]>([]);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageError, setImageError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -100,12 +107,14 @@ export default function AdminProductsPage() {
     setName(''); setArabicName(''); setSlug(''); setBrand('');
     setCategory(categoriesList[0]?.slug || 'groceries'); setSubcategory(''); setCountry('Egypt');
     setDescription(''); setArabicDescription('');
-    setImageUrl('https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=600&auto=format&fit=crop');
+    setSellingUnit('piece');
     setWeight(''); setIngredients(''); setAllergens('');
     setStock(100); setFeatured(false); setBestSeller(false); setWeeklyDeal(false); setSku('');
     setSingleOpt(defaultOption('single'));
     setPackOpt(defaultOption('pack'));
     setCaseOpt(defaultOption('case'));
+    setProductImages([]);
+    setImageError('');
     setSaveError('');
   };
 
@@ -119,13 +128,15 @@ export default function AdminProductsPage() {
     setSubcategory(prod.subcategoryId || '');
     setCountry(prod.country); setDescription(prod.description);
     setArabicDescription(prod.arabicDescription);
-    setImageUrl(prod.images[0]); setWeight(prod.weight);
+    setSellingUnit(prod.sellingUnit || 'piece');
+    setWeight(prod.weight);
     setIngredients(prod.ingredients); setAllergens(prod.allergens);
     setStock(prod.stock); setFeatured(prod.featured); setBestSeller(prod.bestSeller);
     setWeeklyDeal(prod.weeklyDeal === true); setSku(prod.sku || '');
     setSingleOpt(loadOpt('single', prod));
     setPackOpt(loadOpt('pack', prod));
     setCaseOpt(loadOpt('case', prod));
+    setProductImages(prod.imageDetails || []);
     setIsModalOpen(true);
   };
 
@@ -135,9 +146,17 @@ export default function AdminProductsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm(isAr ? 'هل أنت متأكد من حذف هذا المنتج؟' : 'Delete this product?')) {
+    if (!confirm(isAr ? 'هل أنت متأكد من حذف هذا المنتج؟' : 'Delete this product?')) return;
+    setDeleteError('');
+    try {
       await ProductService.deleteProduct(id);
       loadData();
+    } catch (err: any) {
+      // Most commonly: the backend refuses to hard-delete a product that
+      // has real order history (see ProductController::destroy) — surface
+      // that reason to the admin instead of failing silently, and point
+      // them at Deactivate as the safe alternative.
+      setDeleteError(err.message || (isAr ? 'فشل حذف المنتج.' : 'Failed to delete product.'));
     }
   };
 
@@ -166,7 +185,8 @@ export default function AdminProductsPage() {
       categoryId: catObj?.id || category, 
       subcategoryId: subcategory || undefined,
       country, origin: country, description, arabicDescription,
-      images: [imageUrl],
+      images: editingProduct?.images ?? [],
+      sellingUnit,
       rating: editingProduct?.rating ?? 4.5,
       reviews: editingProduct?.reviews ?? [],
       weight, ingredients, allergens,
@@ -182,13 +202,74 @@ export default function AdminProductsPage() {
     try {
       if (editingProduct) {
         await ProductService.updateProduct({ ...payload, id: editingProduct.id });
+        setIsModalOpen(false);
       } else {
-        await ProductService.createProduct(payload);
+        // Images are uploaded via a separate endpoint that requires a real
+        // product id, so a brand-new product switches into edit mode after
+        // creation instead of closing — the admin can then upload images
+        // right away without having to re-open the product.
+        const created = await ProductService.createProduct(payload);
+        setEditingProduct(created);
+        setProductImages(created.imageDetails || []);
       }
-      setIsModalOpen(false);
       loadData();
     } catch (err: any) {
       setSaveError(err.message || 'Error saving product');
+    }
+  };
+
+  // ── Image management handlers ──────────────────────────────────────────────
+  const handleImageFilesSelected = async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0 || !editingProduct) return;
+    setImageError('');
+    setImageUploading(true);
+    try {
+      const updated = await ProductImageService.upload(editingProduct.id, Array.from(fileList));
+      setProductImages(updated);
+    } catch (err: any) {
+      setImageError(err.message || (isAr ? 'فشل رفع الصورة' : 'Failed to upload image(s)'));
+    } finally {
+      setImageUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleSetPrimaryImage = async (imageId: number) => {
+    if (!editingProduct) return;
+    setImageError('');
+    try {
+      const updated = await ProductImageService.setPrimary(editingProduct.id, imageId);
+      setProductImages(updated);
+    } catch (err: any) {
+      setImageError(err.message || (isAr ? 'فشل تحديث الصورة الرئيسية' : 'Failed to set primary image'));
+    }
+  };
+
+  const handleDeleteImage = async (imageId: number) => {
+    if (!editingProduct) return;
+    if (!confirm(isAr ? 'هل تريد حذف هذه الصورة؟' : 'Delete this image?')) return;
+    setImageError('');
+    try {
+      const updated = await ProductImageService.remove(editingProduct.id, imageId);
+      setProductImages(updated);
+    } catch (err: any) {
+      setImageError(err.message || (isAr ? 'فشل حذف الصورة' : 'Failed to delete image'));
+    }
+  };
+
+  const handleMoveImage = async (index: number, direction: -1 | 1) => {
+    if (!editingProduct) return;
+    const target = index + direction;
+    if (target < 0 || target >= productImages.length) return;
+    const reordered = [...productImages];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    setProductImages(reordered);
+    try {
+      const updated = await ProductImageService.reorder(editingProduct.id, reordered.map((img) => img.id));
+      setProductImages(updated);
+    } catch (err: any) {
+      setImageError(err.message || (isAr ? 'فشل إعادة الترتيب' : 'Failed to reorder images'));
+      setProductImages(productImages); // revert optimistic reorder on failure
     }
   };
 
@@ -302,6 +383,15 @@ export default function AdminProductsPage() {
 
   return (
     <div className="space-y-6 fade-in" dir={isAr ? 'rtl' : 'ltr'}>
+
+      {deleteError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700 font-semibold flex items-start justify-between gap-3">
+          <span>{deleteError}</span>
+          <button onClick={() => setDeleteError('')} className="text-red-400 hover:text-red-600 shrink-0">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Header Banner */}
       <div className="flex justify-between items-center border-b border-light-border pb-4">
@@ -498,8 +588,8 @@ export default function AdminProductsPage() {
                 </div>
               </div>
 
-              {/* SKU & Weight */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* SKU, Weight & Selling Unit */}
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">SKU / Item Code</label>
                   <input value={sku} placeholder="e.g. ME-GROC-102" onChange={(e) => setSku(e.target.value)}
@@ -509,6 +599,16 @@ export default function AdminProductsPage() {
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Weight / Size *</label>
                   <input required value={weight} placeholder="e.g. 450g or 1 Liter" onChange={(e) => setWeight(e.target.value)}
                     className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    {isAr ? 'وحدة البيع *' : 'Selling Unit *'}
+                  </label>
+                  <select value={sellingUnit} onChange={(e) => setSellingUnit(e.target.value as SellingUnit)}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 bg-white">
+                    <option value="piece">{isAr ? 'حبة (Piece)' : 'Piece'}</option>
+                    <option value="carton">{isAr ? 'كرتونة (Carton)' : 'Carton'}</option>
+                  </select>
                 </div>
               </div>
 
@@ -526,19 +626,103 @@ export default function AdminProductsPage() {
                 </div>
               </div>
 
-              {/* Image, Ingredients, Allergens */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1 col-span-2">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Image URL</label>
-                  <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300" />
+              {/* ── PRODUCT IMAGES ──────────────────────────────────────────── */}
+              <div className="border-t border-light-border pt-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-primary" />
+                  <h4 className="text-xs font-bold text-primary uppercase tracking-wider">
+                    {isAr ? 'صور المنتج' : 'Product Images'}
+                  </h4>
                 </div>
+
+                {!editingProduct ? (
+                  <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    {isAr
+                      ? 'احفظ بيانات المنتج أولاً، ثم يمكنك رفع الصور.'
+                      : 'Save the product details first — you can then upload images.'}
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-[10px] text-muted-text">
+                      {isAr
+                        ? 'JPG, PNG أو WebP فقط، بحد أقصى 5 ميجابايت لكل صورة. أول صورة تُرفع تصبح الصورة الرئيسية تلقائياً.'
+                        : 'JPG, PNG, or WebP only, max 5MB each. The first image uploaded becomes primary automatically.'}
+                    </p>
+
+                    {productImages.length > 0 && (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                        {productImages.map((img, idx) => (
+                          <div key={img.id} className={`relative border rounded-xl overflow-hidden group ${img.isMain ? 'border-primary ring-1 ring-primary/30' : 'border-gray-200'}`}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={img.url} alt="" className="w-full h-20 object-cover bg-gray-50" />
+                            {img.isMain && (
+                              <span className="absolute top-1 left-1 rtl:left-auto rtl:right-1 bg-primary text-cream text-[8px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                                <Star className="w-2.5 h-2.5 fill-current" />
+                                {isAr ? 'رئيسية' : 'Primary'}
+                              </span>
+                            )}
+                            <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 py-1">
+                              <button type="button" onClick={() => handleMoveImage(idx, -1)} disabled={idx === 0}
+                                className="p-1 text-white disabled:opacity-30" title={isAr ? 'تحريك لليسار' : 'Move left'}>
+                                <ArrowLeft className="w-3 h-3" />
+                              </button>
+                              {!img.isMain && (
+                                <button type="button" onClick={() => handleSetPrimaryImage(img.id)}
+                                  className="p-1 text-white" title={isAr ? 'تعيين كرئيسية' : 'Set as primary'}>
+                                  <Star className="w-3 h-3" />
+                                </button>
+                              )}
+                              <button type="button" onClick={() => handleDeleteImage(img.id)}
+                                className="p-1 text-red-300 hover:text-red-400" title={isAr ? 'حذف' : 'Delete'}>
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                              <button type="button" onClick={() => handleMoveImage(idx, 1)} disabled={idx === productImages.length - 1}
+                                className="p-1 text-white disabled:opacity-30" title={isAr ? 'تحريك لليمين' : 'Move right'}>
+                                <ArrowRight className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {productImages.length === 0 && (
+                      <div className="flex items-center gap-2 text-[11px] text-gray-400 border border-dashed border-gray-300 rounded-lg px-3 py-3">
+                        <ImageOff className="w-4 h-4" />
+                        {isAr ? 'لا توجد صور بعد — سيتم عرض صورة افتراضية للعملاء.' : 'No images yet — customers will see a placeholder image.'}
+                      </div>
+                    )}
+
+                    <div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        multiple
+                        disabled={imageUploading}
+                        onChange={(e) => handleImageFilesSelected(e.target.files)}
+                        className="w-full text-xs file:mr-3 rtl:file:ml-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-primary file:text-cream file:text-xs file:font-bold file:cursor-pointer hover:file:bg-primary-dark disabled:opacity-50"
+                      />
+                      {imageUploading && (
+                        <span className="text-[10px] text-gray-400">{isAr ? 'جاري الرفع...' : 'Uploading...'}</span>
+                      )}
+                    </div>
+
+                    {imageError && (
+                      <p className="text-[11px] text-red-600 font-semibold">{imageError}</p>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Ingredients & Allergens */}
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Allergens</label>
                   <input value={allergens} onChange={(e) => setAllergens(e.target.value)}
                     className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300" />
                 </div>
-                <div className="space-y-1 col-span-2">
+                <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Ingredients</label>
                   <input value={ingredients} onChange={(e) => setIngredients(e.target.value)}
                     className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300" />

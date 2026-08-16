@@ -1,0 +1,18 @@
+import type { MetadataRoute } from 'next';
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: [
+      {
+        userAgent: '*',
+        allow: '/',
+        // Account, cart, checkout, and the admin back office have no SEO value
+        // and shouldn't be crawled/indexed.
+        disallow: ['/admin', '/account', '/cart', '/checkout', '/order-success'],
+      },
+    ],
+    sitemap: `${SITE_URL}/sitemap.xml`,
+  };
+}

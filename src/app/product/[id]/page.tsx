@@ -7,7 +7,7 @@ import { ProductService } from '@/services/products';
 import { useCartStore } from '@/store/cart-store';
 import { useWishlistStore } from '@/store/wishlist-store';
 import { useLocaleStore } from '@/store/locale-store';
-import { formatPrice, translateCountry } from '@/lib/utils';
+import { formatPrice, translateCountry, getPurchaseOptionLabel } from '@/lib/utils';
 import ProductCard from '@/components/products/product-card';
 import { 
   Heart, 
@@ -39,6 +39,10 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
   const [activeTab, setActiveTab] = useState<'description' | 'details' | 'reviews'>('description');
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+  const FALLBACK_IMAGE = 'https://placehold.co/600x600/FDF8F0/6B6355?text=No+Image';
+  const galleryImages = product && product.images && product.images.length > 0 ? product.images : [FALLBACK_IMAGE];
 
   const addToCart = useCartStore((state) => state.addToCart);
   const { toggleWishlist, hasItem } = useWishlistStore();
@@ -57,6 +61,7 @@ export default function ProductDetailPage() {
 
         if (prod) {
           setProduct(prod);
+          setSelectedImageIndex(0);
           // Set default selected option to first enabled choice
           const enabledOpts = (['single', 'pack', 'case'] as const).filter(
             (key) => prod.purchaseOptions[key]?.enabled !== false
@@ -154,29 +159,42 @@ export default function ProductDetailPage() {
           <div className="border border-light-border rounded-2xl overflow-hidden aspect-square bg-cream/10 relative">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={product.images[0]}
-              alt={product.name}
+              src={galleryImages[selectedImageIndex] || FALLBACK_IMAGE}
+              alt={locale === 'ar' ? product.arabicName : product.name}
               className="w-full h-full object-cover"
+              onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }}
             />
             {/* Halal Badge */}
             <div className="absolute top-4 left-4 bg-primary text-cream border border-gold/30 px-3.5 py-1 rounded-full text-xs font-bold tracking-wider shadow-md">
               {t('prod.halal_tag')}
             </div>
           </div>
-          {/* Thumbnails list */}
-          <div className="flex gap-3">
-            {[...Array(3)].map((_, idx) => (
-              <button
-                key={idx}
-                className={`w-20 h-20 rounded-xl overflow-hidden border-2 ${
-                  idx === 0 ? 'border-primary' : 'border-light-border opacity-65 hover:opacity-100'
-                }`}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={product.images[0]} alt="" className="w-full h-full object-cover" />
-              </button>
-            ))}
-          </div>
+          {/* Thumbnails list — only shown when there's actually more than one
+              image to pick between; a single-image product doesn't need one. */}
+          {galleryImages.length > 1 && (
+            <div className="flex gap-3">
+              {galleryImages.map((img, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setSelectedImageIndex(idx)}
+                  aria-label={locale === 'ar' ? `صورة ${idx + 1}` : `View image ${idx + 1}`}
+                  aria-current={idx === selectedImageIndex}
+                  className={`w-20 h-20 rounded-xl overflow-hidden border-2 transition-opacity ${
+                    idx === selectedImageIndex ? 'border-primary' : 'border-light-border opacity-65 hover:opacity-100'
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={img || FALLBACK_IMAGE}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right: Info details */}
@@ -219,7 +237,7 @@ export default function ProductDetailPage() {
               <span className="text-3xl font-bold text-primary">
                 {formatPrice(optionPrice, locale)}
               </span>
-              <span className="text-sm text-gray-500 font-medium">/ {t('prod.' + selectedOption)}</span>
+              <span className="text-sm text-gray-500 font-medium">/ {getPurchaseOptionLabel(product.purchaseOptions, selectedOption, locale, product.sellingUnit)}</span>
             </div>
             {selectedOption !== 'single' && (
               <span className="text-xs text-green-700 font-bold bg-green-50 px-2 py-0.5 rounded-md border border-green-200 inline-block">
@@ -231,7 +249,7 @@ export default function ProductDetailPage() {
           {/* Sizing description */}
           <div className="space-y-1 text-sm">
             <span className="text-muted-text">{t('prod.weight')}:</span>{' '}
-            <strong className="text-dark">{product.weight} {selectedOption !== 'single' && `(${optionDetails.quantity} units per ${t('prod.' + selectedOption)})`}</strong>
+            <strong className="text-dark">{product.weight} {selectedOption !== 'single' && `(${optionDetails.quantity} units per ${getPurchaseOptionLabel(product.purchaseOptions, selectedOption, locale, product.sellingUnit)})`}</strong>
           </div>
 
           {/* Purchase Options Config */}
@@ -256,7 +274,7 @@ export default function ProductDetailPage() {
                         : 'bg-white border-light-border hover:bg-gray-50'
                     }`}
                   >
-                    <span className="block text-xs font-bold text-dark uppercase">{t(`prod.${opt}`)}</span>
+                    <span className="block text-xs font-bold text-dark uppercase">{getPurchaseOptionLabel(product.purchaseOptions, opt, locale, product.sellingUnit)}</span>
                     <span className="block text-xs text-gray-400 mb-2">
                       {opt === 'single' ? '1 Unit' : `${optDetails.quantity} Units`}
                     </span>
