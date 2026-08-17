@@ -78,7 +78,9 @@ export default function AdminProductsPage() {
     setLoading(true);
     try {
       const [allProds, allCats] = await Promise.all([
-        ProductService.getProducts(true),
+        // per_page set high so the admin list shows the whole catalog, not just
+        // the backend's default 12-per-page.
+        ProductService.getProducts(true, { per_page: 1000 }),
         CategoryService.getCategories(true),
       ]);
       setProducts(allProds);
