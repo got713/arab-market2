@@ -25,6 +25,8 @@ function ShopContent() {
 
   // Filters State
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedOrigins, setSelectedOrigins] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<string | null>(null);
@@ -37,22 +39,18 @@ function ShopContent() {
 
   const [categoriesList, setCategoriesList] = useState<Category[]>([]);
 
-  // A subcategory link always carries its parent category too (see
-  // category/[slug]/page.tsx), so this is resolved server-side via
-  // ProductController's `subcategory` slug filter — not matched client-side
-  // against a subcategory id, which the product payload doesn't even expose.
-  const subcategoryParam = searchParams?.get('subcategory') || null;
+  // Pagination (client-side, over the already-loaded/filtered set)
+  const PRODUCTS_PER_PAGE = 24;
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // Load products & categories — scoped to the subcategory server-side when
-  // one is requested, so the rest of the client-side filter pipeline below
-  // (brand/price/halal/etc.) composes on top of an already-correct base set.
+  // Load products & categories on mount.
+  // per_page is set high so the whole catalog loads in one request instead of
+  // the backend's default 12-per-page — the shop page paginates client-side.
   useEffect(() => {
     const fetchAll = async () => {
-      setLoading(true);
       try {
-        const categoryParam = searchParams?.get('category');
         const [prodsList, catsList] = await Promise.all([
-          ProductService.getProducts(true, subcategoryParam ? { subcategory: subcategoryParam, category: categoryParam || undefined } : undefined),
+          ProductService.getProducts(true, { per_page: 1000 }),
           CategoryService.getCategories(false), // only active
         ]);
         setAllProducts(prodsList);
@@ -64,8 +62,7 @@ function ShopContent() {
       }
     };
     fetchAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subcategoryParam]);
+  }, []);
 
   // Sync category filter from URL search query if exists
   useEffect(() => {
@@ -99,6 +96,11 @@ function ShopContent() {
     // Filter by category
     if (selectedCategories.length > 0) {
       result = result.filter((p) => selectedCategories.includes(p.category));
+    }
+
+    // Filter by subcategory (drill-down within a selected category)
+    if (selectedSubcategory) {
+      result = result.filter((p) => String(p.subcategoryId ?? '') === selectedSubcategory);
     }
 
     // Filter by tag
@@ -162,16 +164,37 @@ function ShopContent() {
     }
 
     setFilteredProducts(result);
-  }, [allProducts, selectedCategories, selectedBrands, selectedOrigins, priceRange, filterBy, onlyHalal, onlyInStock, sortBy, selectedTag]);
+  }, [allProducts, selectedCategories, selectedSubcategory, selectedBrands, selectedOrigins, priceRange, filterBy, onlyHalal, onlyInStock, sortBy, selectedTag]);
+
+  // Reset to page 1 whenever the visible result set changes (new filters/sort)
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredProducts.length, selectedCategories, selectedSubcategory, selectedBrands, selectedOrigins, priceRange, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * PRODUCTS_PER_PAGE,
+    currentPage * PRODUCTS_PER_PAGE
+  );
 
   const toggleCategory = (cat: string) => {
-    setSelectedCategories((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [cat] // single-select filter mimicking screenshot layout category path
-    );
+    setSelectedCategories((prev) => {
+      const next = prev.includes(cat) ? prev.filter((c) => c !== cat) : [cat]; // single-select filter mimicking screenshot layout category path
+      return next;
+    });
+    setSelectedSubcategory(null);
+    setExpandedCategory((prev) => (prev === cat ? null : cat));
+  };
+
+  const toggleSubcategory = (categorySlug: string, subId: string) => {
+    setSelectedCategories([categorySlug]);
+    setSelectedSubcategory((prev) => (prev === subId ? null : subId));
   };
 
   const handleResetFilters = () => {
     setSelectedCategories([]);
+    setSelectedSubcategory(null);
+    setExpandedCategory(null);
     setSelectedBrands([]);
     setSelectedOrigins([]);
     setPriceRange(null);
@@ -191,6 +214,11 @@ function ShopContent() {
   // Brand products counts calculator
   const getBrandCount = (br: string) => {
     return allProducts.filter((p) => p.brand === br).length;
+  };
+
+  // Subcategory products counts calculator
+  const getSubcategoryCount = (subId: string) => {
+    return allProducts.filter((p) => String(p.subcategoryId ?? '') === subId).length;
   };
 
   const currentCategoryName = selectedCategories.length > 0 
@@ -248,21 +276,49 @@ function ShopContent() {
               {categoriesList.map((cat) => {
                 const active = selectedCategories.includes(cat.slug);
                 const count = getCategoryCount(cat.slug);
+                const isExpanded = expandedCategory === cat.slug;
+                const subs = (cat.subcategories || []) as Array<{ id?: string | number; slug: string; name: string; arabicName: string }>;
                 return (
-                  <button
-                    key={cat.slug}
-                    onClick={() => toggleCategory(cat.slug)}
-                    className={`w-full flex items-center justify-between text-xs px-3 py-2.5 rounded-xl text-left rtl:text-right transition-colors ${
-                      active
-                        ? 'bg-primary text-white font-bold shadow-2xs'
-                        : 'text-gray-650 hover:bg-primary/5 font-medium'
-                    }`}
-                  >
-                    <span className="font-cairo">{locale === 'ar' ? cat.arabicName : cat.name}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-md font-mono ${active ? 'bg-white/10 text-white' : 'bg-gray-100 text-gray-500 font-bold'}`}>
-                      {count}
-                    </span>
-                  </button>
+                  <div key={cat.slug}>
+                    <button
+                      onClick={() => toggleCategory(cat.slug)}
+                      className={`w-full flex items-center justify-between text-xs px-3 py-2.5 rounded-xl text-left rtl:text-right transition-colors ${
+                        active
+                          ? 'bg-primary text-white font-bold shadow-2xs'
+                          : 'text-gray-650 hover:bg-primary/5 font-medium'
+                      }`}
+                    >
+                      <span className="font-cairo">{locale === 'ar' ? cat.arabicName : cat.name}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-md font-mono ${active ? 'bg-white/10 text-white' : 'bg-gray-100 text-gray-500 font-bold'}`}>
+                        {count}
+                      </span>
+                    </button>
+
+                    {isExpanded && subs.length > 0 && (
+                      <div className="mt-1 ms-3 ps-3 border-s-2 border-light-border space-y-1">
+                        {subs.map((sub) => {
+                          const subId = String(sub.id ?? sub.slug);
+                          const subCount = getSubcategoryCount(subId);
+                          const subActive = selectedSubcategory === subId;
+                          if (subCount === 0) return null;
+                          return (
+                            <button
+                              key={sub.slug}
+                              onClick={() => toggleSubcategory(cat.slug, subId)}
+                              className={`w-full flex items-center justify-between text-[11px] px-2.5 py-1.5 rounded-lg text-left rtl:text-right transition-colors ${
+                                subActive
+                                  ? 'bg-gold/20 text-primary font-bold'
+                                  : 'text-gray-500 hover:bg-primary/5 font-medium'
+                              }`}
+                            >
+                              <span className="font-cairo">{locale === 'ar' ? sub.arabicName : sub.name}</span>
+                              <span className="text-[10px] text-gray-400 font-mono">{subCount}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -407,21 +463,64 @@ function ShopContent() {
               ))}
             </div>
           ) : filteredProducts.length > 0 ? (
-            viewMode === 'grid' ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
-                {filteredProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {filteredProducts.map((product) => (
-                  <div key={product.id} className="w-full">
-                    <ProductCard product={product} />
-                  </div>
-                ))}
-              </div>
-            )
+            <>
+              {viewMode === 'grid' ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
+                  {paginatedProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {paginatedProducts.map((product) => (
+                    <div key={product.id} className="w-full">
+                      <ProductCard product={product} />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Pagination bar */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-1.5 pt-4">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-2 rounded-lg text-xs font-bold border border-light-border text-gray-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary/5 transition-colors"
+                  >
+                    {isAr ? 'السابق' : 'Prev'}
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((page) => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
+                    .map((page, idx, arr) => (
+                      <React.Fragment key={page}>
+                        {idx > 0 && arr[idx - 1] !== page - 1 && (
+                          <span className="px-1 text-gray-300 text-xs">…</span>
+                        )}
+                        <button
+                          onClick={() => setCurrentPage(page)}
+                          className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${
+                            page === currentPage
+                              ? 'bg-primary text-white'
+                              : 'border border-light-border text-gray-500 hover:bg-primary/5'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      </React.Fragment>
+                    ))}
+
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-2 rounded-lg text-xs font-bold border border-light-border text-gray-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary/5 transition-colors"
+                  >
+                    {isAr ? 'التالي' : 'Next'}
+                  </button>
+                </div>
+              )}
+            </>
           ) : (
             <div className="text-center py-16 bg-cream/10 border border-dashed border-light-border rounded-2xl">
               <RefreshCw className="w-8 h-8 text-gray-300 mx-auto mb-3 animate-spin duration-3000" />
