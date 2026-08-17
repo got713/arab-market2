@@ -51,7 +51,7 @@ class ApplyStockCategoryImages extends Command
         'spices' => '1574484152510-903878da786c',
         'herbs' => '1574484152510-903878da786c',
         'condiments' => '1474979266404-7eaacbcd87c5',
-        'frozen-vegetables' => '1547058886-f6d62c3f87ec',
+        'frozen-vegetables' => '1576045057995-568f588f82fb',
         'frozen-dough' => '1558458601-0d69a278b8e6',
         'frozen-meals' => '1572098873382-f8e4bf925781',
     ];
@@ -62,7 +62,7 @@ class ApplyStockCategoryImages extends Command
         'drinks' => '1447933601403-0c6688de566e',
         'groceries' => '1586201375761-83865001e31c',
         'spices-sauces' => '1574484152510-903878da786c',
-        'frozen' => '1547058886-f6d62c3f87ec',
+        'frozen' => '1576045057995-568f588f82fb',
     ];
 
     public function handle(): int

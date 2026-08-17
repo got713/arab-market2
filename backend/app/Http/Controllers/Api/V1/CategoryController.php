@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Subcategory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class CategoryController extends Controller
@@ -119,6 +121,44 @@ class CategoryController extends Controller
             'featured' => $request->featured ?? $category->featured,
             'display_order' => $request->display_order ?? $category->display_order,
         ]);
+
+        return response()->json($category);
+    }
+
+    // Uploads a real photo from the admin's device for a category (or
+    // subcategory, via the optional ?subcategory=<slug> query param) and
+    // stores it as that record's `image`, replacing whatever URL was there
+    // before — same validation/storage approach as ProductImageController,
+    // so a client-supplied filename never reaches the filesystem.
+    public function uploadImage(Request $request, $id)
+    {
+        $category = Category::findOrFail($id);
+
+        $request->validate([
+            'image' => [
+                'required',
+                'file',
+                'mimes:jpg,jpeg,png,webp',
+                'max:5120', // 5MB, in kilobytes
+                'dimensions:min_width=100,min_height=100,max_width=6000,max_height=6000',
+            ],
+            'subcategory' => 'nullable|string',
+        ]);
+
+        $file = $request->file('image');
+        $filename = (string) Str::uuid() . '.' . strtolower($file->getClientOriginalExtension());
+        $disk = config('filesystems.product_media_disk');
+        $path = $file->storeAs('categories/' . $category->id, $filename, $disk);
+        $url = Storage::disk($disk)->url($path);
+
+        if ($request->filled('subcategory')) {
+            $subcategory = $category->subcategories()->where('slug', $request->subcategory)->firstOrFail();
+            $subcategory->update(['image' => $url]);
+
+            return response()->json($subcategory);
+        }
+
+        $category->update(['image' => $url]);
 
         return response()->json($category);
     }

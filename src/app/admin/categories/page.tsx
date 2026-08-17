@@ -49,6 +49,9 @@ export default function AdminCategoriesPage() {
   const [description, setDescription] = useState('');
   const [arabicDescription, setArabicDescription] = useState('');
   const [image, setImage] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [icon, setIcon] = useState('ShoppingBag');
   const [active, setActive] = useState(true);
   const [featured, setFeatured] = useState(false);
@@ -82,6 +85,8 @@ export default function AdminCategoriesPage() {
     setDescription('');
     setArabicDescription('');
     setImage('https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=600&auto=format&fit=crop');
+    setImageFile(null);
+    setImagePreview('');
     setIcon('ShoppingBag');
     setActive(true);
     setFeatured(false);
@@ -98,6 +103,8 @@ export default function AdminCategoriesPage() {
     setDescription(cat.description);
     setArabicDescription(cat.arabicDescription || '');
     setImage(cat.image);
+    setImageFile(null);
+    setImagePreview('');
     setIcon(cat.icon || 'ShoppingBag');
     setActive(cat.active !== false);
     setFeatured(cat.featured === true);
@@ -142,6 +149,13 @@ export default function AdminCategoriesPage() {
     }
   };
 
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -160,18 +174,28 @@ export default function AdminCategoriesPage() {
     };
 
     try {
-      if (editingCategory) {
-        await CategoryService.updateCategory({
-          ...payload,
-          id: editingCategory.id,
-          subcategories: editingCategory.subcategories,
-        });
-      } else {
-        await CategoryService.createCategory(payload);
+      // Save the text fields first (name, slug, order, ...); the category
+      // needs to exist with an id before a photo can be attached to it.
+      const savedCategory = editingCategory
+        ? await CategoryService.updateCategory({
+            ...payload,
+            id: editingCategory.id,
+            subcategories: editingCategory.subcategories,
+          })
+        : await CategoryService.createCategory(payload);
+
+      // A device photo was picked — upload it now and let it replace
+      // whatever `image` URL was just saved above.
+      if (imageFile) {
+        setUploadingImage(true);
+        await CategoryService.uploadCategoryImage(savedCategory.id, imageFile);
+        setUploadingImage(false);
       }
+
       setIsModalOpen(false);
       loadData();
     } catch (err: any) {
+      setUploadingImage(false);
       setErrorMsg(err.message || 'Error saving category');
     }
   };
@@ -415,15 +439,35 @@ export default function AdminCategoriesPage() {
                 </div>
               </div>
 
-              {/* Image URL */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase font-cairo">Image URL</label>
-                <input
-                  type="text"
-                  value={image}
-                  onChange={(e) => setImage(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 focus:outline-none"
-                />
+              {/* Category Photo — upload from device, not a pasted link */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-gray-400 uppercase font-cairo">
+                  {isAr ? 'صورة القسم' : 'Category Photo'}
+                </label>
+                <div className="flex items-center gap-3">
+                  <div className="w-16 h-16 rounded-lg border border-gray-300 overflow-hidden bg-gray-50 shrink-0 flex items-center justify-center">
+                    {(imagePreview || image) ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={imagePreview || image} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-[9px] text-gray-400 font-cairo">{isAr ? 'لا صورة' : 'No Image'}</span>
+                    )}
+                  </div>
+                  <label className="flex-1 cursor-pointer">
+                    <span className="block w-full text-center px-3 py-2 text-xs font-bold rounded-lg border border-dashed border-primary/40 text-primary hover:bg-primary/5 transition-colors font-cairo">
+                      {imageFile ? (isAr ? 'تم اختيار صورة' : 'Photo selected') : (isAr ? 'ارفع صورة من جهازك' : 'Upload photo from your device')}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleImageFileChange}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                <p className="text-[10px] text-gray-400 font-cairo">
+                  {isAr ? 'JPG, PNG أو WEBP — بحد أقصى 5 ميجابايت' : 'JPG, PNG or WEBP — up to 5MB'}
+                </p>
               </div>
 
               {/* Descriptions */}
@@ -499,9 +543,12 @@ export default function AdminCategoriesPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-primary hover:bg-primary-dark text-cream rounded-lg font-bold shadow-sm"
+                  disabled={uploadingImage}
+                  className="px-5 py-2 bg-primary hover:bg-primary-dark text-cream rounded-lg font-bold shadow-sm disabled:opacity-60"
                 >
-                  {editingCategory ? (isAr ? 'حفظ التعديلات' : 'Save Changes') : (isAr ? 'إضافة القسم' : 'Create Category')}
+                  {uploadingImage
+                    ? (isAr ? 'جارِ رفع الصورة...' : 'Uploading photo...')
+                    : editingCategory ? (isAr ? 'حفظ التعديلات' : 'Save Changes') : (isAr ? 'إضافة القسم' : 'Create Category')}
                 </button>
               </div>
 

@@ -100,6 +100,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/admin/categories', [CategoryController::class, 'storeCategory']);
             Route::put('/admin/categories/{id}', [CategoryController::class, 'updateCategory']);
             Route::delete('/admin/categories/{id}', [CategoryController::class, 'destroyCategory']);
+            Route::post('/admin/categories/{id}/image', [CategoryController::class, 'uploadImage']);
             
             // Subcategory management
             Route::post('/admin/categories/{categoryId}/subcategories', [CategoryController::class, 'storeSubcategory']);
