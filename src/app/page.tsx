@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { Product } from '@/types';
 import { ProductService } from '@/services/products';
 import { useLocaleStore } from '@/store/locale-store';
+import { useCartStore } from '@/store/cart-store';
+import { useAuthStore } from '@/store/auth-store';
 import ProductCard from '@/components/products/product-card';
 import { 
   ArrowRight, 
@@ -30,15 +32,19 @@ export default function HomePage() {
   
   const [bestSellers, setBestSellers] = useState<Product[]>([]);
   const [egyptianFavorites, setEgyptianFavorites] = useState<Product[]>([]);
+  const [buyAgainProducts, setBuyAgainProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [homeSearchQuery, setHomeSearchQuery] = useState('');
+
+  const { isAuthenticated, user } = useAuthStore();
+  const { getSubtotal } = useCartStore();
 
   useEffect(() => {
     const loadHomeData = async () => {
       setLoading(true);
       try {
         const allProds = await ProductService.getProducts(true);
-
+        
         // 1. Best Sellers: Products marked as bestSeller
         setBestSellers(allProds.filter((p) => p.bestSeller).slice(0, 6));
 
@@ -46,6 +52,11 @@ export default function HomePage() {
         setEgyptianFavorites(
           allProds.filter((p) => p.tags?.includes('Egyptian') || p.country?.toLowerCase() === 'egypt').slice(0, 6)
         );
+
+        // 3. Buy Again: Simulating prior orders loading
+        if (isAuthenticated) {
+          setBuyAgainProducts(allProds.slice(2, 6));
+        }
       } catch (err) {
         console.error('Failed to load homepage data:', err);
       } finally {
@@ -53,7 +64,7 @@ export default function HomePage() {
       }
     };
     loadHomeData();
-  }, []);
+  }, [isAuthenticated]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -184,14 +195,16 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-6">
           {[
-            { id: 'groceries',       en: 'Groceries',       ar: 'بقالة عامة',       descEn: 'Pantry essentials', descAr: 'أساسيات المطبخ', img: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&q=80&w=300' },
-            { id: 'frozen',          en: 'Frozen Foods',    ar: 'مجمدات',           descEn: 'Vegetables & meals', descAr: 'خضار ووجبات',   img: 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&q=80&w=300' },
-            { id: 'drinks',          en: 'Drinks',          ar: 'مشروبات',         descEn: 'Tea, coffee & juices', descAr: 'شاي، قهوة وعصائر', img: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&q=80&w=300' },
-            { id: 'sweets-snacks',   en: 'Sweets & Snacks', ar: 'حلويات ومقرمشات',   descEn: 'Baklava & snacks',  descAr: 'بقلاوة ومسليات',  img: 'https://images.unsplash.com/photo-1505976378723-9726af547a02?auto=format&fit=crop&q=80&w=300' },
-            { id: 'spices-sauces',   en: 'Spices & Sauces', ar: 'توابل وصلصات',     descEn: 'Herbs & oils',      descAr: 'أعشاب وزيوت',    img: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&q=80&w=300' },
-            { id: 'household',       en: 'Household',       ar: 'مستلزمات منزلية',   descEn: 'Cleaning & kitchen', descAr: 'منظفات ومطبخ',   img: 'https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&q=80&w=300' },
+            { id: 'frozen-foods',        en: 'Frozen Foods',           ar: 'المجمدات والمثلجات',       descEn: 'Vegetables & meals',  descAr: 'خضار ووجبات',       img: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&q=80&w=300' },
+            { id: 'canned-foods',        en: 'Canned Foods',           ar: 'الأطعمة المعلبة',          descEn: 'Tuna, fava & hommos', descAr: 'تونة، فول وحمص',    img: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&q=80&w=300' },
+            { id: 'rice-pasta-grains',   en: 'Rice, Pasta & Grains',   ar: 'الأرز والمكرونة والحبوب',   descEn: 'Pasta, rice & grains', descAr: 'مكرونة، أرز وحبوب', img: 'https://images.unsplash.com/photo-1497802492746-aa584aa6ea22?auto=format&fit=crop&q=80&w=300' },
+            { id: 'dairy-eggs',          en: 'Dairy & Eggs',           ar: 'الألبان والأجبان',         descEn: 'Cheese & butter',     descAr: 'أجبان وزبدة',       img: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=300' },
+            { id: 'coffee-tea-drinks',   en: 'Coffee, Tea & Drinks',   ar: 'الشاي والقهوة والمشروبات', descEn: 'Tea, coffee & juices', descAr: 'شاي، قهوة وعصائر',  img: 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&q=80&w=300' },
+            { id: 'nuts-seeds-snacks',   en: 'Nuts, Seeds & Snacks',   ar: 'المكسرات واللب والتسالي',  descEn: 'Nuts & crunchy snacks', descAr: 'مكسرات ومقرمشات', img: 'https://images.unsplash.com/photo-1775210291462-af8fd54da403?auto=format&fit=crop&q=80&w=300' },
+            { id: 'sweets-biscuits',     en: 'Sweets & Biscuits',      ar: 'الحلويات والبسكويت',       descEn: 'Chocolate & baklava', descAr: 'شوكولاتة وبقلاوة',  img: 'https://images.unsplash.com/photo-1625414502495-0c35143e32d3?auto=format&fit=crop&q=80&w=300' },
+            { id: 'oils-spices-sauces',  en: 'Oils, Spices & Sauces',  ar: 'الزيوت والتوابل والصوصات', descEn: 'Herbs & oils',        descAr: 'أعشاب وزيوت',       img: 'https://images.unsplash.com/photo-1574484152510-903878da786c?auto=format&fit=crop&q=80&w=300' },
           ].map((cat) => (
             <Link 
               key={cat.id} 
