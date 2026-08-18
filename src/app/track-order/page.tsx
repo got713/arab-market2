@@ -39,11 +39,12 @@ function TrackOrderContent() {
     setError('');
     setSearched(true);
     try {
-      const result = await OrderService.trackOrder(idToTrack, locale);
-      // The backend looks orders up by order_number alone (no email filter
-      // server-side), so verify the email matches here — otherwise anyone
-      // who guesses/knows an order number could see someone else's order.
-      if (result && result.customer.email.trim().toLowerCase() === emailToTrack.trim().toLowerCase()) {
+      // The backend now validates the email against the order's own
+      // customer_email server-side and 404s on any mismatch (see
+      // OrderController::track) — the order is never returned to begin
+      // with unless the email is correct.
+      const result = await OrderService.trackOrder(idToTrack, emailToTrack, locale);
+      if (result) {
         setOrder(result);
       } else {
         setOrder(null);

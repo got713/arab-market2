@@ -12,9 +12,11 @@ export const OrderService = {
     }
   },
 
-  getOrderById: async (id: string, locale: 'en' | 'ar' = 'en'): Promise<Order | null> => {
+  // email is required now — the backend track endpoint uses it as a second
+  // factor (order_number alone isn't secret) and 404s without it.
+  getOrderById: async (id: string, email: string, locale: 'en' | 'ar' = 'en'): Promise<Order | null> => {
     try {
-      return await OrderService.trackOrder(id, locale);
+      return await OrderService.trackOrder(id, email, locale);
     } catch (err) {
       return null;
     }
@@ -95,11 +97,15 @@ export const OrderService = {
     return OrderService.formatOrder(res);
   },
 
-  trackOrder: async (query: string, locale: 'en' | 'ar' = 'en'): Promise<Order | null> => {
+  // email is required — the backend validates it against the order's
+  // customer_email as a second factor, since the order number alone is
+  // guessable/leakable and previously exposed the full order (name, email,
+  // phone, address) to anyone who had it.
+  trackOrder: async (query: string, email: string, locale: 'en' | 'ar' = 'en'): Promise<Order | null> => {
     try {
       const q = query.trim();
-      if (!q) return null;
-      const res = await ApiClient.get<any>(`/orders/track/${q}`, undefined, locale);
+      if (!q || !email.trim()) return null;
+      const res = await ApiClient.get<any>(`/orders/track/${q}`, { params: { email: email.trim() } }, locale);
       return OrderService.formatOrder(res);
     } catch (err) {
       return null;

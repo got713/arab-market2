@@ -28,7 +28,7 @@ function OrderSuccessContent() {
     }
     const fetchOrder = async () => {
       try {
-        const o = await OrderService.getOrderById(id, locale);
+        const o = await OrderService.getOrderById(id, email, locale);
         setOrder(o);
       } catch (err) {
         console.error(err);
