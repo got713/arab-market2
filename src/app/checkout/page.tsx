@@ -31,6 +31,8 @@ export default function CheckoutPage() {
     appliedCoupon,
     standardRate,
     expressRate,
+    getShippingRateId,
+    checkZip,
   } = useCartStore();
 
   // Redirect to cart if empty — but not once an order has already been placed
@@ -56,6 +58,31 @@ export default function CheckoutPage() {
   const [city, setCity] = useState(user?.city || '');
   const [state, setState] = useState(user?.state || '');
   const [zip, setZip] = useState(shippingZip || user?.zip || '');
+
+  // Once the customer has filled in a full address, re-quote shipping with
+  // the real address + cart contents so the backend can try a live Shippo
+  // rate (falls back to the flat zip-only estimate automatically if Shippo
+  // isn't configured or fails — see OrderController::getShippingRates).
+  // Debounced so we don't fire a request on every keystroke.
+  useEffect(() => {
+    if (!address || !city || !state || !/^\d{5}$/.test(zip)) return;
+
+    const timer = setTimeout(() => {
+      checkZip(zip, {
+        address,
+        city,
+        state,
+        items: items.map(i => ({
+          productId: i.product.id,
+          option: i.option,
+          quantity: i.quantity,
+        })),
+      });
+    }, 600);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address, city, state, zip]);
 
   // Order + Stripe payment state
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
@@ -104,11 +131,15 @@ export default function CheckoutPage() {
       const newOrder = await OrderService.createOrder(
         customerRecord,
         items,
-        shippingOption,
+        subtotal,
+        shipping,
         discount,
+        total,
         'Credit Card (Stripe)',
         appliedCoupon?.code, // previously dropped entirely — server can't validate/track a coupon it never receives
-        locale
+        locale,
+        shippingOption === 'express' ? 'Express' : 'Standard',
+        getShippingRateId()
       );
 
       setPlacedOrder(newOrder);

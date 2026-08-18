@@ -17,14 +17,28 @@ interface CartState {
   // OrderController::resolveShippingCost).
   standardRate: number;
   expressRate: number;
-  
+  // Shippo rate object_id for each option, set only when the last checkZip
+  // call got a live Shippo quote (source: 'shippo') rather than the flat
+  // fallback — null means "no real rate to buy a label against yet".
+  standardRateId: string | null;
+  expressRateId: string | null;
+
   addToCart: (product: Product, option: 'single' | 'pack' | 'case', quantity?: number) => Promise<void>;
   removeFromCart: (productId: string, option: 'single' | 'pack' | 'case') => Promise<void>;
   updateQuantity: (productId: string, option: 'single' | 'pack' | 'case', quantity: number) => Promise<void>;
   clearCart: () => Promise<void>;
   applyCoupon: (coupon: Coupon | null) => void;
   setShippingOption: (option: 'standard' | 'express') => void;
-  checkZip: (zip: string) => Promise<{ available: boolean; standardRate: number; expressRate: number }>;
+  checkZip: (
+    zip: string,
+    opts?: {
+      address?: string;
+      city?: string;
+      state?: string;
+      items?: { productId: string; option: 'single' | 'pack' | 'case'; quantity: number }[];
+    }
+  ) => Promise<{ available: boolean; standardRate: number; expressRate: number }>;
+  getShippingRateId: () => string | null;
   resetZip: () => void;
   fetchServerCart: () => Promise<void>;
   syncCartWithServer: () => Promise<void>;
@@ -48,6 +62,8 @@ export const useCartStore = create<CartState>()(
       freeShippingThreshold: 50,
       standardRate: 7.99,
       expressRate: 14.99,
+      standardRateId: null,
+      expressRateId: null,
 
       fetchServerCart: async () => {
         const token = typeof window !== 'undefined' ? localStorage.getItem('am_token') : null;
@@ -200,7 +216,7 @@ export const useCartStore = create<CartState>()(
         set({ shippingOption });
       },
 
-      checkZip: async (zip) => {
+      checkZip: async (zip, opts) => {
         const isValid = /^\d{5}$/.test(zip);
         if (!isValid) {
           set({ shippingZip: zip, isZipChecked: true, isDeliveryAvailable: false });
@@ -208,10 +224,24 @@ export const useCartStore = create<CartState>()(
         }
 
         try {
-          const res = await ApiClient.post<any>('/checkout/shipping-rates', { zip });
+          const body: any = { zip };
+          if (opts?.address) body.address = opts.address;
+          if (opts?.city) body.city = opts.city;
+          if (opts?.state) body.state = opts.state;
+          if (opts?.items?.length) {
+            body.items = opts.items.map(i => ({
+              product_id: i.productId,
+              option: i.option,
+              quantity: i.quantity,
+            }));
+          }
+
+          const res = await ApiClient.post<any>('/checkout/shipping-rates', body);
           const rates = res.rates || [];
-          const standard = Number(rates.find((r: any) => r.id === 'standard')?.cost ?? get().standardRate);
-          const express = Number(rates.find((r: any) => r.id === 'express')?.cost ?? get().expressRate);
+          const standardRateObj = rates.find((r: any) => r.id === 'standard');
+          const expressRateObj = rates.find((r: any) => r.id === 'express');
+          const standard = Number(standardRateObj?.cost ?? get().standardRate);
+          const express = Number(expressRateObj?.cost ?? standardRateObj?.cost ?? get().expressRate);
 
           set({
             shippingZip: zip,
@@ -219,6 +249,11 @@ export const useCartStore = create<CartState>()(
             isDeliveryAvailable: true,
             standardRate: standard,
             expressRate: express,
+            // Only a live Shippo quote carries a rate_id — the flat fallback
+            // doesn't, so this naturally clears back to null when Shippo is
+            // unavailable and we're back on flat pricing.
+            standardRateId: standardRateObj?.rate_id ?? null,
+            expressRateId: expressRateObj?.rate_id ?? standardRateObj?.rate_id ?? null,
           });
 
           return {
@@ -232,11 +267,20 @@ export const useCartStore = create<CartState>()(
         }
       },
 
+      getShippingRateId: () => {
+        const state = get();
+        return state.shippingOption === 'express'
+          ? state.expressRateId
+          : state.standardRateId;
+      },
+
       resetZip: () => {
         set({
           shippingZip: '',
           isZipChecked: false,
           isDeliveryAvailable: false,
+          standardRateId: null,
+          expressRateId: null,
         });
       },
 
