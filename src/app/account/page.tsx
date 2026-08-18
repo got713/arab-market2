@@ -28,7 +28,7 @@ import {
 export default function AccountPage() {
   const router = useRouter();
   const { t, locale } = useLocaleStore();
-  const { user, isAuthenticated, loginWithCredentials, registerCustomer, logout, updateProfile } = useAuthStore();
+  const { user, isAdmin, isAuthenticated, loginWithCredentials, registerCustomer, logout, updateProfile } = useAuthStore();
   const addToCart = useCartStore((state) => state.addToCart);
 
   // Logged-out view mode
@@ -399,7 +399,7 @@ export default function AccountPage() {
         <div>
           <h1 className="text-2xl sm:text-4xl font-bold text-dark">{t('account.title')}</h1>
           <p className="text-xs sm:text-sm text-muted-text mt-1">
-            {t('account.welcome')}, <strong>{user?.name}</strong> • Account level: Customer
+            {t('account.welcome')}, <strong>{user?.name}</strong> • Account level: {isAdmin ? 'Administrator' : 'Customer'}
           </p>
         </div>
         <button
