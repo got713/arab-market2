@@ -39,8 +39,11 @@ function TrackOrderContent() {
     setError('');
     setSearched(true);
     try {
-      const result = await OrderService.trackOrder(idToTrack, emailToTrack);
-      if (result) {
+      const result = await OrderService.trackOrder(idToTrack, locale);
+      // The backend looks orders up by order_number alone (no email filter
+      // server-side), so verify the email matches here — otherwise anyone
+      // who guesses/knows an order number could see someone else's order.
+      if (result && result.customer.email.trim().toLowerCase() === emailToTrack.trim().toLowerCase()) {
         setOrder(result);
       } else {
         setOrder(null);
@@ -51,7 +54,7 @@ function TrackOrderContent() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     if (queryId && queryEmail) {

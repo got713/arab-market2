@@ -24,6 +24,19 @@ export const OrderService = {
     return OrderService.getOrders({ search: email }, locale);
   },
 
+  // The authenticated user's own order history (backend: GET /orders/my,
+  // scoped server-side to the Sanctum-authenticated user — never trusted
+  // from a client-supplied id/email).
+  getMyOrders: async (locale: 'en' | 'ar' = 'en'): Promise<Order[]> => {
+    try {
+      const res = await ApiClient.get<any>('/orders/my', undefined, locale);
+      const data = res.data || res;
+      return Array.isArray(data) ? data.map((o: any) => OrderService.formatOrder(o)) : [];
+    } catch (err) {
+      return [];
+    }
+  },
+
   createOrder: async (
     customer: OrderCustomer,
     items: CartItem[],
@@ -62,20 +75,19 @@ export const OrderService = {
     return OrderService.formatOrder(res.order);
   },
 
+  // Takes the order's Laravel auto-increment id directly (what the admin
+  // orders list already has via Order.databaseId) — previously this looked
+  // the order back up by order_number via trackOrder() first, which never
+  // matched a databaseId being passed in and was pure overhead anyway.
   updateOrderStatus: async (
-    orderId: string,
+    orderDatabaseId: number,
     status: Order['status'],
     paymentStatus?: string,
     locale: 'en' | 'ar' = 'en'
   ): Promise<Order> => {
-    // Map status labels if they are differently cased in UI
     const targetStatus = status.toLowerCase();
-    
-    // Fetch DB record by order number first to get the auto-increment ID
-    const orderDetails = await OrderService.trackOrder(orderId, locale);
-    if (!orderDetails) throw new Error('Order not found');
 
-    const res = await ApiClient.put<any>(`/admin/orders/${orderDetails.databaseId}/status`, {
+    const res = await ApiClient.put<any>(`/admin/orders/${orderDatabaseId}/status`, {
       status: targetStatus,
       payment_status: paymentStatus
     }, undefined, locale);
