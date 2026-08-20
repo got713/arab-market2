@@ -20,6 +20,12 @@ export default function AdminOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Invoice language — independent of the admin panel's own UI language.
+  // The store ships in the US, so invoices/shipping paperwork default to
+  // English regardless of what language the admin happens to be browsing
+  // the dashboard in; the admin can flip it to Arabic per-invoice if needed.
+  const [invoiceLocale, setInvoiceLocale] = useState<'en' | 'ar'>('en');
+
   const loadOrders = async () => {
     setLoading(true);
     try {
@@ -63,6 +69,7 @@ export default function AdminOrdersPage() {
 
   const handleOpenDetailModal = (order: Order) => {
     setSelectedOrder(order);
+    setInvoiceLocale('en');
     setIsModalOpen(true);
   };
 
@@ -202,7 +209,7 @@ export default function AdminOrdersPage() {
                 padding: 24px;
                 box-shadow: none;
                 border: none;
-                direction: ${locale === 'ar' ? 'rtl' : 'ltr'};
+                direction: ${invoiceLocale === 'ar' ? 'rtl' : 'ltr'};
               }
               /* The site's Arabic web font (Cairo) doesn't get embedded
                  correctly by Chrome's print-to-PDF pipeline — Arabic text
@@ -219,24 +226,44 @@ export default function AdminOrdersPage() {
           `}</style>
           <div id="invoice-print-area" className="relative w-full max-w-xl bg-white rounded-xl shadow-2xl border border-light-border overflow-hidden my-8">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-light-border bg-cream" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
+            <div className="flex items-center justify-between p-4 border-b border-light-border bg-cream" dir={invoiceLocale === 'ar' ? 'rtl' : 'ltr'}>
               <span className="font-bold text-sm text-primary uppercase tracking-wider flex items-center gap-1.5">
                 <FileText className="w-4.5 h-4.5 text-gold" />
-                <span>{locale === 'ar' ? 'تفاصيل فاتورة العميل' : 'Invoice Details'} ({selectedOrder.id})</span>
+                <span>{invoiceLocale === 'ar' ? 'تفاصيل فاتورة العميل' : 'Invoice Details'} ({selectedOrder.id})</span>
               </span>
-              <button onClick={() => setIsModalOpen(false)} className="no-print text-gray-400 hover:text-dark">
-                <XCircle className="w-5 h-5 text-gray-500 hover:text-red-650 transition-colors" />
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Invoice language toggle — controls only this invoice's
+                    text/layout, not the rest of the admin dashboard. */}
+                <div className="no-print flex items-center rounded-lg border border-gray-300 overflow-hidden text-[10px] font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceLocale('en')}
+                    className={`px-2.5 py-1 transition-colors ${invoiceLocale === 'en' ? 'bg-primary text-cream' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                  >
+                    EN
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceLocale('ar')}
+                    className={`px-2.5 py-1 transition-colors border-l border-gray-300 ${invoiceLocale === 'ar' ? 'bg-primary text-cream' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                  >
+                    AR
+                  </button>
+                </div>
+                <button onClick={() => setIsModalOpen(false)} className="no-print text-gray-400 hover:text-dark">
+                  <XCircle className="w-5 h-5 text-gray-500 hover:text-red-650 transition-colors" />
+                </button>
+              </div>
             </div>
 
             {/* Content */}
-            <div className="p-6 space-y-6 max-h-[85vh] overflow-y-auto no-scrollbar text-xs" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
+            <div className="p-6 space-y-6 max-h-[85vh] overflow-y-auto no-scrollbar text-xs" dir={invoiceLocale === 'ar' ? 'rtl' : 'ltr'}>
               
               {/* Customer and Shipping grids */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-b border-light-border pb-4">
                 <div className="space-y-1.5">
                   <span className="text-[10px] text-gray-400 font-bold uppercase block">
-                    {locale === 'ar' ? 'وجهة الشحن والتسليم' : 'Shipping Destination'}
+                    {invoiceLocale === 'ar' ? 'وجهة الشحن والتسليم' : 'Shipping Destination'}
                   </span>
                   <strong className="text-sm text-dark block font-semibold">{selectedOrder.customer.name}</strong>
                   <p className="text-gray-500 leading-normal">{selectedOrder.customer.address}</p>
@@ -244,12 +271,12 @@ export default function AdminOrdersPage() {
                 </div>
                 <div className="space-y-1.5 text-gray-600">
                   <span className="text-[10px] text-gray-400 font-bold uppercase block">
-                    {locale === 'ar' ? 'بيانات الاتصال والتواصل' : 'Contact Details'}
+                    {invoiceLocale === 'ar' ? 'بيانات الاتصال والتواصل' : 'Contact Details'}
                   </span>
-                  <p>{locale === 'ar' ? 'البريد الإلكتروني:' : 'Email:'} <strong>{selectedOrder.customer.email}</strong></p>
-                  <p>{locale === 'ar' ? 'رقم الهاتف:' : 'Phone:'} <strong>{selectedOrder.customer.phone}</strong></p>
+                  <p>{invoiceLocale === 'ar' ? 'البريد الإلكتروني:' : 'Email:'} <strong>{selectedOrder.customer.email}</strong></p>
+                  <p>{invoiceLocale === 'ar' ? 'رقم الهاتف:' : 'Phone:'} <strong>{selectedOrder.customer.phone}</strong></p>
                   <p className="pt-2 border-t border-gray-150 mt-1">
-                    {locale === 'ar' ? 'طريقة الدفع:' : 'Payment Method:'} <strong>{selectedOrder.paymentMethod}</strong>
+                    {invoiceLocale === 'ar' ? 'طريقة الدفع:' : 'Payment Method:'} <strong>{selectedOrder.paymentMethod}</strong>
                   </p>
                 </div>
               </div>
@@ -257,21 +284,21 @@ export default function AdminOrdersPage() {
               {/* Items Breakdown list */}
               <div className="space-y-3">
                 <h4 className="font-bold text-sm text-primary uppercase tracking-wider">
-                  {locale === 'ar' ? 'تفاصيل السلة والمشتريات' : 'Package Inventory'}
+                  {invoiceLocale === 'ar' ? 'تفاصيل السلة والمشتريات' : 'Package Inventory'}
                 </h4>
                 <div className="border border-light-border rounded-lg overflow-hidden divide-y divide-gray-100 bg-white">
                   {selectedOrder.items.map((item, idx) => (
                     <div key={idx} className="p-3 flex justify-between items-center bg-gray-50/20 text-xs">
                       <div>
                         <strong className="text-dark block font-semibold">
-                          {locale === 'ar' ? item.product.arabicName : item.product.name}
+                          {invoiceLocale === 'ar' ? item.product.arabicName : item.product.name}
                         </strong>
                         <span className="text-[10px] text-gray-400 uppercase">
-                          {item.quantity} x {locale === 'ar' ? (item.option === 'single' ? 'قطعة' : item.option === 'pack' ? 'رابطة' : 'صندوق') : item.option} ({item.product.weight})
+                          {item.quantity} x {invoiceLocale === 'ar' ? (item.option === 'single' ? 'قطعة' : item.option === 'pack' ? 'رابطة' : 'صندوق') : item.option} ({item.product.weight})
                         </span>
                       </div>
                       <span className="font-bold text-primary">
-                        {formatPrice(item.product.purchaseOptions[item.option].price * item.quantity, locale)}
+                        {formatPrice(item.product.purchaseOptions[item.option].price * item.quantity, invoiceLocale)}
                       </span>
                     </div>
                   ))}
@@ -281,40 +308,40 @@ export default function AdminOrdersPage() {
               {/* Price Calculations */}
               <div className="pt-2 border-t border-light-border flex flex-col items-end gap-1.5 text-gray-600 max-w-xs ml-auto rtl:mr-auto rtl:ml-0 font-medium">
                 <div className="flex justify-between w-full">
-                  <span>{locale === 'ar' ? 'المجموع الفرعي' : 'Subtotal'}</span>
-                  <strong>{formatPrice(selectedOrder.subtotal, locale)}</strong>
+                  <span>{invoiceLocale === 'ar' ? 'المجموع الفرعي' : 'Subtotal'}</span>
+                  <strong>{formatPrice(selectedOrder.subtotal, invoiceLocale)}</strong>
                 </div>
                 {selectedOrder.discount > 0 && (
                   <div className="flex justify-between w-full text-green-700">
-                    <span>{locale === 'ar' ? 'خصم الكوبون' : 'Coupon Discount'}</span>
-                    <strong>-{formatPrice(selectedOrder.discount, locale)}</strong>
+                    <span>{invoiceLocale === 'ar' ? 'خصم الكوبون' : 'Coupon Discount'}</span>
+                    <strong>-{formatPrice(selectedOrder.discount, invoiceLocale)}</strong>
                   </div>
                 )}
                 <div className="flex justify-between w-full">
-                  <span>{locale === 'ar' ? 'تكلفة الشحن والتوصيل' : 'Shipping Fee'}</span>
-                  <strong>{selectedOrder.shipping === 0 ? (locale === 'ar' ? 'شحن مجاني' : 'FREE') : formatPrice(selectedOrder.shipping, locale)}</strong>
+                  <span>{invoiceLocale === 'ar' ? 'تكلفة الشحن والتوصيل' : 'Shipping Fee'}</span>
+                  <strong>{selectedOrder.shipping === 0 ? (invoiceLocale === 'ar' ? 'شحن مجاني' : 'FREE') : formatPrice(selectedOrder.shipping, invoiceLocale)}</strong>
                 </div>
                 <div className="flex justify-between w-full pt-2 border-t border-gray-150 text-dark font-bold text-sm">
-                  <span>{locale === 'ar' ? 'الإجمالي الكلي للطلب' : 'Grand Total'}</span>
-                  <span className="text-primary text-base font-bold">{formatPrice(selectedOrder.total, locale)}</span>
+                  <span>{invoiceLocale === 'ar' ? 'الإجمالي الكلي للطلب' : 'Grand Total'}</span>
+                  <span className="text-primary text-base font-bold">{formatPrice(selectedOrder.total, invoiceLocale)}</span>
                 </div>
               </div>
 
               {/* Actions Footer */}
               <div className="no-print flex justify-between items-center pt-4 border-t border-light-border">
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-400 font-bold">{locale === 'ar' ? 'الحالة:' : 'Status:'}</span>
+                  <span className="text-gray-400 font-bold">{invoiceLocale === 'ar' ? 'الحالة:' : 'Status:'}</span>
                   <select
                     value={selectedOrder.status}
                     onChange={(e) => handleStatusChange(selectedOrder.databaseId, e.target.value as Order['status'])}
                     className="bg-gray-50 border border-gray-300 rounded px-2.5 py-1 text-xs focus:outline-none"
                   >
-                    <option value="Pending">{locale === 'ar' ? 'معلق' : 'Pending'}</option>
-                    <option value="Processing">{locale === 'ar' ? 'جاري التجهيز' : 'Processing'}</option>
-                    <option value="Shipped">{locale === 'ar' ? 'تم الشحن' : 'Shipped'}</option>
-                    <option value="Out for Delivery">{locale === 'ar' ? 'مع المندوب للتوصيل' : 'Out for Delivery'}</option>
-                    <option value="Delivered">{locale === 'ar' ? 'تم التسليم' : 'Delivered'}</option>
-                    <option value="Cancelled">{locale === 'ar' ? 'إلغاء الطلب' : 'Cancelled'}</option>
+                    <option value="Pending">{invoiceLocale === 'ar' ? 'معلق' : 'Pending'}</option>
+                    <option value="Processing">{invoiceLocale === 'ar' ? 'جاري التجهيز' : 'Processing'}</option>
+                    <option value="Shipped">{invoiceLocale === 'ar' ? 'تم الشحن' : 'Shipped'}</option>
+                    <option value="Out for Delivery">{invoiceLocale === 'ar' ? 'مع المندوب للتوصيل' : 'Out for Delivery'}</option>
+                    <option value="Delivered">{invoiceLocale === 'ar' ? 'تم التسليم' : 'Delivered'}</option>
+                    <option value="Cancelled">{invoiceLocale === 'ar' ? 'إلغاء الطلب' : 'Cancelled'}</option>
                   </select>
                 </div>
                 <div className="flex items-center gap-2">
@@ -323,13 +350,13 @@ export default function AdminOrdersPage() {
                     className="px-4 py-1.5 border border-gray-350 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition-colors inline-flex items-center gap-1.5"
                   >
                     <Printer className="w-3.5 h-3.5 text-gold" />
-                    <span>{locale === 'ar' ? 'طباعة الفاتورة' : 'Print Invoice'}</span>
+                    <span>{invoiceLocale === 'ar' ? 'طباعة الفاتورة' : 'Print Invoice'}</span>
                   </button>
                   <button
                     onClick={() => setIsModalOpen(false)}
                     className="px-4 py-1.5 bg-primary text-cream font-bold rounded-lg hover:bg-primary-dark transition-colors"
                   >
-                    {locale === 'ar' ? 'إغلاق الفاتورة' : 'Close Invoice'}
+                    {invoiceLocale === 'ar' ? 'إغلاق الفاتورة' : 'Close Invoice'}
                   </button>
                 </div>
               </div>
