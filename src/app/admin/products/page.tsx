@@ -6,7 +6,7 @@ import { ProductService, ProductImageService } from '@/services/products';
 import { CategoryService } from '@/services/categories';
 import { formatPrice, translateCountry } from '@/lib/utils';
 import { useLocaleStore } from '@/store/locale-store';
-import { Plus, Edit, Trash2, X, ToggleLeft, ToggleRight, Package, PackageCheck, Upload, Star, ArrowLeft, ArrowRight, ImageOff } from 'lucide-react';
+import { Plus, Edit, Trash2, X, ToggleLeft, ToggleRight, Package, PackageCheck, Upload, Star, ArrowLeft, ArrowRight, ImageOff, ChevronDown, ChevronRight, Search, Layers } from 'lucide-react';
 
 // ── Default option labels ────────────────────────────────────────────────────
 const DEFAULT_LABELS = {
@@ -42,6 +42,13 @@ export default function AdminProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [saveError, setSaveError] = useState('');
   const [deleteError, setDeleteError] = useState('');
+
+  // ── Category grouping / search (admin catalog browsing) ────────────────────
+  const [searchQuery, setSearchQuery] = useState('');
+  const [collapsedCats, setCollapsedCats] = useState<Record<string, boolean>>({});
+  const toggleCategoryOpen = (slug: string) => {
+    setCollapsedCats((prev) => ({ ...prev, [slug]: !prev[slug] }));
+  };
 
   // ── Form fields ────────────────────────────────────────────────────────────
   const [name, setName]                         = useState('');
@@ -383,6 +390,148 @@ export default function AdminProductsPage() {
   const selectedCatObj = categoriesList.find((c) => c.slug === category);
   const subcategoriesList = selectedCatObj?.subcategories || [];
 
+  // ── Search + category grouping for the catalog table ───────────────────────
+  // Matches by name (EN/AR), brand, SKU, or product id so the admin can jump
+  // straight to a product instead of scrolling/hunting through every section.
+  const q = searchQuery.trim().toLowerCase();
+  const searchFilteredProducts = !q
+    ? products
+    : products.filter((p) => {
+        return (
+          p.name?.toLowerCase().includes(q) ||
+          p.arabicName?.includes(searchQuery.trim()) ||
+          p.brand?.toLowerCase().includes(q) ||
+          p.sku?.toLowerCase().includes(q) ||
+          p.id?.toLowerCase().includes(q)
+        );
+      });
+
+  const productGroups = categoriesList
+    .map((cat) => ({
+      cat,
+      items: searchFilteredProducts.filter((p) => p.category === cat.slug || p.categoryId === cat.id),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  const groupedIds = new Set(productGroups.flatMap((g) => g.items.map((p) => p.id)));
+  const uncategorizedItems = searchFilteredProducts.filter((p) => !groupedIds.has(p.id));
+
+  // While actively searching, force every matching section open so results
+  // are never hidden behind a collapsed category.
+  const isCategoryOpen = (slug: string) => (q ? true : !collapsedCats[slug]);
+
+  // Single row renderer, shared between grouped-by-category sections and the
+  // "Uncategorized" fallback section below them.
+  const renderProductRow = (prod: Product) => {
+    const opts = prod.purchaseOptions;
+    const rowCat = categoriesList.find((c) => c.slug === prod.category || c.id === prod.categoryId);
+    const catName = rowCat ? (isAr ? rowCat.arabicName : rowCat.name) : prod.category;
+
+    return (
+      <tr key={prod.id} className="hover:bg-cream/20 transition-colors">
+        <td className="p-4">
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={prod.images[0]} alt={prod.name} className="w-10 h-10 object-cover rounded-lg border border-light-border bg-gray-50 shrink-0" />
+            <div>
+              <strong className="text-dark block text-[13px] font-semibold font-cairo">
+                {isAr ? prod.arabicName : prod.name}
+              </strong>
+              <span className="text-[10px] text-gray-400 font-mono">{prod.weight} · {prod.id} {prod.sku && `· SKU: ${prod.sku}`}</span>
+            </div>
+          </div>
+        </td>
+        <td className="p-4">
+          <span className="font-semibold text-dark">{prod.brand}</span>
+          <span className="block text-[10px] text-gray-400">{translateCountry(prod.country, locale)}</span>
+        </td>
+        <td className="p-4 font-semibold text-gray-600 text-[11px] font-cairo">
+          {catName}
+        </td>
+
+        {/* Buy Options badges */}
+        <td className="p-4">
+          <div className="flex flex-wrap gap-1">
+            {(['single', 'pack', 'case'] as const).map((key) => {
+              const o = opts[key];
+              const on = o && o.enabled !== false;
+              const lbl = isAr
+                ? (o?.labelAr || DEFAULT_LABELS[key].ar)
+                : (o?.label   || DEFAULT_LABELS[key].en);
+              return (
+                <span
+                  key={key}
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                    on
+                      ? 'bg-green-50 text-green-700 border-green-200'
+                      : 'bg-gray-100 text-gray-400 border-gray-200 line-through'
+                  }`}
+                >
+                  {lbl}
+                </span>
+              );
+            })}
+          </div>
+        </td>
+
+        <td className="p-4 font-bold text-primary">
+          {formatPrice(opts.single.price, locale)}
+        </td>
+        <td className="p-4 font-semibold text-dark">
+          {prod.stock === 0
+            ? <span className="text-red-650 font-bold">{isAr ? 'نفد' : 'Out'}</span>
+            : <span>{prod.stock} {isAr ? 'وحدة' : 'units'}</span>}
+        </td>
+        <td className="p-4">
+          <button
+            onClick={() => handleToggleStatus(prod)}
+            className={`px-3 py-1 rounded-full text-[10px] font-bold border font-cairo transition-all ${
+              prod.active !== false
+                ? 'bg-green-50 text-green-700 border-green-200'
+                : 'bg-red-50 text-red-650 border-red-200'
+            }`}
+          >
+            {prod.active !== false ? (isAr ? 'نشط' : 'Active') : (isAr ? 'معطّل' : 'Off')}
+          </button>
+        </td>
+        <td className="p-4 text-right rtl:text-left space-x-1">
+          <button onClick={() => openEdit(prod)} className="p-1.5 text-gray-500 hover:text-primary border border-gray-200 rounded-md hover:bg-gray-50 transition-colors">
+            <Edit className="w-4 h-4" />
+          </button>
+          <button onClick={() => handleDelete(prod.id)} className="p-1.5 text-red-500 hover:bg-red-50 border border-red-100 rounded-md transition-colors">
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </td>
+      </tr>
+    );
+  };
+
+  // Shared collapsible section header row (category name + item count + chevron).
+  const renderSectionHeader = (key: string, label: string, count: number, open: boolean, muted = false) => (
+    <tr key={`hdr-${key}`}>
+      <td colSpan={8} className="p-0">
+        <button
+          type="button"
+          onClick={() => toggleCategoryOpen(key)}
+          className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 border-y border-light-border text-left rtl:text-right transition-colors ${
+            muted ? 'bg-gray-100 hover:bg-gray-150' : 'bg-cream/60 hover:bg-cream'
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            {open
+              ? <ChevronDown className={`w-3.5 h-3.5 ${muted ? 'text-gray-500' : 'text-primary'}`} />
+              : <ChevronRight className={`w-3.5 h-3.5 rtl:rotate-180 ${muted ? 'text-gray-500' : 'text-primary'}`} />}
+            <Layers className={`w-3.5 h-3.5 ${muted ? 'text-gray-400' : 'text-gold'}`} />
+            <span className={`text-xs font-bold font-cairo ${muted ? 'text-gray-600' : 'text-dark'}`}>{label}</span>
+          </span>
+          <span className="text-[10px] font-bold text-gray-400 uppercase font-cairo">
+            {count} {isAr ? 'منتج' : 'items'}
+          </span>
+        </button>
+      </td>
+    </tr>
+  );
+
   return (
     <div className="space-y-6 fade-in" dir={isAr ? 'rtl' : 'ltr'}>
 
@@ -396,18 +545,35 @@ export default function AdminProductsPage() {
       )}
 
       {/* Header Banner */}
-      <div className="flex justify-between items-center border-b border-light-border pb-4">
+      <div className="flex flex-wrap justify-between items-center gap-3 border-b border-light-border pb-4">
         <div className="text-xs text-gray-500 font-medium font-cairo">
           {isAr ? 'إجمالي المنتجات في الكتالوج: ' : 'Total in catalog: '}
           <strong>{products.length}</strong>
+          {q && (
+            <span className="ml-2 rtl:mr-2 rtl:ml-0 text-primary font-semibold">
+              ({searchFilteredProducts.length} {isAr ? 'نتيجة بحث' : 'matching search'})
+            </span>
+          )}
         </div>
-        <button
-          onClick={openAdd}
-          className="px-4 py-2 bg-primary text-cream hover:bg-primary-dark font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-sm transition-colors font-cairo"
-        >
-          <Plus className="w-4 h-4" />
-          {isAr ? 'إضافة منتج' : 'Add Product'}
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 rtl:left-auto rtl:right-2.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={isAr ? 'ابحث بالاسم، الماركة، أو SKU...' : 'Search name, brand, or SKU...'}
+              className="w-56 sm:w-72 pl-8 rtl:pl-3 rtl:pr-8 pr-3 py-2 text-xs rounded-lg border border-gray-300 focus:outline-none focus:border-primary font-cairo"
+            />
+          </div>
+          <button
+            onClick={openAdd}
+            className="px-4 py-2 bg-primary text-cream hover:bg-primary-dark font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-sm transition-colors font-cairo shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            {isAr ? 'إضافة منتج' : 'Add Product'}
+          </button>
+        </div>
       </div>
 
       {/* Products Table */}
@@ -432,90 +598,37 @@ export default function AdminProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-light-border">
-                {products.map((prod) => {
-                  const opts = prod.purchaseOptions;
-                  // Category lookup
-                  const catObj = categoriesList.find(c => c.slug === prod.category || c.id === prod.categoryId);
-                  const catName = catObj ? (isAr ? catObj.arabicName : catObj.name) : prod.category;
-                  
+                {productGroups.map(({ cat, items }) => {
+                  const open = isCategoryOpen(cat.slug);
                   return (
-                    <tr key={prod.id} className="hover:bg-cream/20 transition-colors">
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={prod.images[0]} alt={prod.name} className="w-10 h-10 object-cover rounded-lg border border-light-border bg-gray-50 shrink-0" />
-                          <div>
-                            <strong className="text-dark block text-[13px] font-semibold font-cairo">
-                              {isAr ? prod.arabicName : prod.name}
-                            </strong>
-                            <span className="text-[10px] text-gray-400 font-mono">{prod.weight} · {prod.id} {prod.sku && `· SKU: ${prod.sku}`}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <span className="font-semibold text-dark">{prod.brand}</span>
-                        <span className="block text-[10px] text-gray-400">{translateCountry(prod.country, locale)}</span>
-                      </td>
-                      <td className="p-4 font-semibold text-gray-600 text-[11px] font-cairo">
-                        {catName}
-                      </td>
-
-                      {/* Buy Options badges */}
-                      <td className="p-4">
-                        <div className="flex flex-wrap gap-1">
-                          {(['single', 'pack', 'case'] as const).map((key) => {
-                            const o = opts[key];
-                            const on = o && o.enabled !== false;
-                            const lbl = isAr
-                              ? (o?.labelAr || DEFAULT_LABELS[key].ar)
-                              : (o?.label   || DEFAULT_LABELS[key].en);
-                            return (
-                              <span
-                                key={key}
-                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                                  on
-                                    ? 'bg-green-50 text-green-700 border-green-200'
-                                    : 'bg-gray-100 text-gray-400 border-gray-200 line-through'
-                                }`}
-                              >
-                                {lbl}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </td>
-
-                      <td className="p-4 font-bold text-primary">
-                        {formatPrice(opts.single.price, locale)}
-                      </td>
-                      <td className="p-4 font-semibold text-dark">
-                        {prod.stock === 0
-                          ? <span className="text-red-650 font-bold">{isAr ? 'نفد' : 'Out'}</span>
-                          : <span>{prod.stock} {isAr ? 'وحدة' : 'units'}</span>}
-                      </td>
-                      <td className="p-4">
-                        <button
-                          onClick={() => handleToggleStatus(prod)}
-                          className={`px-3 py-1 rounded-full text-[10px] font-bold border font-cairo transition-all ${
-                            prod.active !== false
-                              ? 'bg-green-50 text-green-700 border-green-200'
-                              : 'bg-red-50 text-red-650 border-red-200'
-                          }`}
-                        >
-                          {prod.active !== false ? (isAr ? 'نشط' : 'Active') : (isAr ? 'معطّل' : 'Off')}
-                        </button>
-                      </td>
-                      <td className="p-4 text-right rtl:text-left space-x-1">
-                        <button onClick={() => openEdit(prod)} className="p-1.5 text-gray-500 hover:text-primary border border-gray-200 rounded-md hover:bg-gray-50 transition-colors">
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => handleDelete(prod.id)} className="p-1.5 text-red-500 hover:bg-red-50 border border-red-100 rounded-md transition-colors">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
+                    <React.Fragment key={cat.id}>
+                      {renderSectionHeader(cat.slug, isAr ? cat.arabicName : cat.name, items.length, open)}
+                      {open && items.map((prod) => renderProductRow(prod))}
+                    </React.Fragment>
                   );
                 })}
+
+                {/* Products whose category slug/id doesn't match any known category */}
+                {uncategorizedItems.length > 0 && (
+                  <React.Fragment key="uncategorized">
+                    {renderSectionHeader(
+                      '__uncategorized__',
+                      isAr ? 'بدون قسم' : 'Uncategorized',
+                      uncategorizedItems.length,
+                      isCategoryOpen('__uncategorized__'),
+                      true
+                    )}
+                    {isCategoryOpen('__uncategorized__') && uncategorizedItems.map((prod) => renderProductRow(prod))}
+                  </React.Fragment>
+                )}
+
+                {productGroups.length === 0 && uncategorizedItems.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="p-10 text-center text-xs text-gray-400 font-semibold font-cairo">
+                      {isAr ? 'لا توجد منتجات مطابقة.' : 'No matching products.'}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
