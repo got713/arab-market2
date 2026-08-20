@@ -202,6 +202,17 @@ export default function AdminOrdersPage() {
                 padding: 24px;
                 box-shadow: none;
                 border: none;
+                direction: ${locale === 'ar' ? 'rtl' : 'ltr'};
+              }
+              /* The site's Arabic web font (Cairo) doesn't get embedded
+                 correctly by Chrome's print-to-PDF pipeline — Arabic text
+                 comes out with broken letter joining/order in the saved
+                 PDF even though it looks fine on screen. Force a standard
+                 system font (which every OS ships with full Arabic shaping
+                 support) for print only, so the printed/exported invoice
+                 renders correctly. */
+              #invoice-print-area, #invoice-print-area * {
+                font-family: Tahoma, 'Segoe UI', Arial, sans-serif !important;
               }
               .no-print { display: none !important; }
             }
