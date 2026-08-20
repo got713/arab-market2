@@ -65,7 +65,7 @@ export const ProductService = {
   },
 
   getProductsByCategory: async (categorySlug: string, locale: 'en' | 'ar' = 'en'): Promise<Product[]> => {
-    return ProductService.getProducts(false, { category: categorySlug }, locale);
+    return ProductService.getProducts(false, { category: categorySlug, per_page: 1000 }, locale);
   },
 
   searchProducts: async (query: string, locale: 'en' | 'ar' = 'en'): Promise<Product[]> => {

@@ -105,11 +105,14 @@ function ShopContent() {
 
     // Filter by tag
     if (selectedTag) {
+      const tagLower = selectedTag.toLowerCase();
       result = result.filter(
         (p) =>
-          (p.tags && p.tags.includes(selectedTag)) ||
-          p.name.toLowerCase().includes(selectedTag) ||
-          p.description.toLowerCase().includes(selectedTag)
+          (p.tags && p.tags.some((t) => t.toLowerCase() === tagLower)) ||
+          p.name.toLowerCase().includes(tagLower) ||
+          p.description.toLowerCase().includes(tagLower) ||
+          p.country.toLowerCase().includes(tagLower) ||
+          tagLower.includes(p.country.toLowerCase())
       );
     }
 
