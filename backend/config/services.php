@@ -41,4 +41,17 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
+    'shippo' => [
+        'token' => env('SHIPPO_API_TOKEN'),
+        'from_name' => env('SHIPPO_FROM_NAME', 'Arab Market'),
+        'from_street1' => env('SHIPPO_FROM_STREET1'),
+        'from_street2' => env('SHIPPO_FROM_STREET2'),
+        'from_city' => env('SHIPPO_FROM_CITY'),
+        'from_state' => env('SHIPPO_FROM_STATE'),
+        'from_zip' => env('SHIPPO_FROM_ZIP'),
+        'from_country' => env('SHIPPO_FROM_COUNTRY', 'US'),
+        'from_phone' => env('SHIPPO_FROM_PHONE'),
+        'from_email' => env('SHIPPO_FROM_EMAIL'),
+    ],
+
 ];

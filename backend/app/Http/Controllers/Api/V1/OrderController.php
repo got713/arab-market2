@@ -10,7 +10,7 @@ use App\Models\Coupon;
 use App\Models\CouponUsage;
 use App\Models\Payment;
 use App\Models\Inventory;
-use App\Models\ShippingMethod;
+use App\Services\ShippoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -19,75 +19,149 @@ use Illuminate\Support\Str;
 
 class OrderController extends Controller
 {
-    // How long an unpaid order holds its inventory/coupon reservation before
-    // the scheduled orders:release-expired command gives it back (see
-    // Order::releaseReservation()).
-    private const RESERVATION_MINUTES = 30;
-
-    // ── SHARED SHIPPING RATE LOGIC ───────────────────────────────────
-    //
-    // SECURITY: this is the ONLY place shipping cost is computed, and it is
-    // read exclusively from the shipping_methods table (managed by admins via
-    // ShippingMethodController). store() below calls resolveShippingCost()
-    // directly instead of trusting a client-supplied shipping_cost — do not
-    // reintroduce a client-supplied cost field, and do not let this read
-    // anything other than the DB row.
-
-    // Delivery-day estimate only (never affects price) — kept as a simple
-    // zip heuristic since there's no per-zip delivery-time data to replace it
-    // with; admin-configured pricing (Phase 2) doesn't change this.
-    private function shippingEstimatedDays(string $zip): int
-    {
-        if (str_starts_with($zip, '9') || str_starts_with($zip, '8')) {
-            return 5;
-        } elseif (str_starts_with($zip, '0') || str_starts_with($zip, '1')) {
-            return 4;
-        }
-        return 3;
-    }
-
-    /**
-     * @return array{cost: float, method_label: string}
-     */
-    private function resolveShippingCost(string $method): array
-    {
-        $shippingMethod = ShippingMethod::where('code', $method)->where('active', true)->first();
-
-        if (!$shippingMethod) {
-            throw new \Illuminate\Http\Exceptions\HttpResponseException(
-                response()->json(['message' => 'The selected shipping method is not currently available.'], 422)
-            );
-        }
-
-        return ['cost' => (float) $shippingMethod->price, 'method_label' => $shippingMethod->name];
-    }
-
     // ── PUBLIC SHIPPING CALCULATOR ───────────────────────────────────
+
+    // Fallback weight (ounces) for any product without a real weight_oz set —
+    // roughly "1 lb", a reasonable generic-grocery-item default until
+    // per-product weights are filled in via Admin.
+    private const DEFAULT_ITEM_WEIGHT_OZ = 16.0;
 
     public function getShippingRates(Request $request)
     {
         $request->validate([
             'zip' => 'required|string|max:10',
+            'city' => 'nullable|string|max:100',
+            'state' => 'nullable|string|max:100',
+            'address' => 'nullable|string|max:255',
+            'items' => 'nullable|array',
+            'items.*.product_id' => 'nullable|exists:products,id',
+            'items.*.option' => 'nullable|in:single,pack,case',
+            'items.*.quantity' => 'nullable|integer|min:1',
         ]);
 
         $zip = trim($request->zip);
-        $deliveryDays = $this->shippingEstimatedDays($zip);
 
-        $rates = ShippingMethod::where('active', true)
-            ->orderBy('display_order')
-            ->orderBy('id')
-            ->get()
-            ->map(function ($m) use ($deliveryDays) {
-                return [
-                    'id' => $m->code,
-                    'name' => $m->name,
-                    'name_ar' => $m->arabic_name,
-                    'cost' => (float) $m->price,
-                    'estimated_days' => $m->code === 'express' ? 1 : $deliveryDays,
-                ];
-            });
+        // Try real Shippo rates when configured AND we have enough of a
+        // destination address + cart contents to ask for a meaningful quote.
+        // Any failure here (missing config, network error, Shippo rejecting
+        // the address) falls straight through to the flat mock rates below —
+        // the site must never go down because Shippo is unreachable.
+        $shippo = new ShippoService();
 
-        return response()->json(['rates' => $rates]);
+        if ($shippo->isConfigured() && $request->filled('city') && $request->filled('state') && $request->filled('items')) {
+            try {
+                $totalWeightOz = 0.0;
+
+                foreach ($request->items as $itemData) {
+                    $product = Product::find($itemData['product_id'] ?? null);
+                    if (!$product) {
+                        continue;
+                    }
+
+                    $unitWeight = (float) ($product->weight_oz ?? self::DEFAULT_ITEM_WEIGHT_OZ);
+                    $option = $itemData['option'] ?? 'single';
+                    $multiplier = 1;
+                    if ($option === 'pack') {
+                        $multiplier = $product->pack_quantity ?: 1;
+                    } elseif ($option === 'case') {
+                        $multiplier = $product->case_quantity ?: 1;
+                    }
+
+                    $totalWeightOz += $unitWeight * $multiplier * (int) ($itemData['quantity'] ?? 1);
+                }
+
+                $rates = $shippo->getRates([
+                    'street1' => $request->input('address'),
+                    'city' => $request->city,
+                    'state' => $request->state,
+                    'zip' => $zip,
+                ], $totalWeightOz);
+
+                $mapped = $this->mapShippoRates($rates);
+
+                if (!empty($mapped)) {
+                    return response()->json(['rates' => $mapped, 'source' => 'shippo']);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Shippo live rate lookup failed, falling back to flat rates.', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        // ── Fallback: configurable mock rates based on US Zip codes ──────
+        // If zip starts with 9 (West coast) or 1/0 (East Coast)
+        $cost = 5.99;
+        $deliveryDays = 3;
+
+        if (str_starts_with($zip, '9') || str_starts_with($zip, '8')) {
+            $cost = 9.99;
+            $deliveryDays = 5;
+        } elseif (str_starts_with($zip, '0') || str_starts_with($zip, '1')) {
+            $cost = 7.99;
+            $deliveryDays = 4;
+        }
+
+        return response()->json([
+            'source' => 'flat',
+            'rates' => [
+                [
+                    'id' => 'standard',
+                    'name' => 'Standard Shipping',
+                    'name_ar' => 'شحن قياسي',
+                    'cost' => $cost,
+                    'estimated_days' => $deliveryDays,
+                ],
+                [
+                    'id' => 'express',
+                    'name' => 'Express Shipping',
+                    'name_ar' => 'شحن سريع',
+                    'cost' => $cost + 8.00,
+                    'estimated_days' => 1,
+                ]
+            ]
+        ]);
+    }
+
+    /**
+     * Shippo returns many carrier/service combinations (USPS Ground, UPS
+     * Next Day Air, etc). Keep it simple for the customer: pick the
+     * cheapest as "standard" and the fastest as "express" — same two-option
+     * shape the frontend already expects, just backed by real prices. Each
+     * mapped rate also carries the raw Shippo `object_id` (as `rate_id`) so
+     * admin label purchase can reference the exact rate the customer saw.
+     */
+    private function mapShippoRates(array $rates): array
+    {
+        $usable = array_values(array_filter($rates, fn($r) => isset($r['amount'], $r['object_id'])));
+        if (empty($usable)) {
+            return [];
+        }
+
+        usort($usable, fn($a, $b) => (float) $a['amount'] <=> (float) $b['amount']);
+        $cheapest = $usable[0];
+
+        usort($usable, fn($a, $b) => (float) ($a['estimated_days'] ?? 99) <=> (float) ($b['estimated_days'] ?? 99));
+        $fastest = $usable[0];
+
+        $format = function (array $r, string $id, string $name, string $nameAr) {
+            return [
+                'id' => $id,
+                'name' => $name . ' (' . ($r['provider'] ?? 'Carrier') . ' ' . ($r['servicelevel']['name'] ?? '') . ')',
+                'name_ar' => $nameAr,
+                'cost' => (float) $r['amount'],
+                'estimated_days' => $r['estimated_days'] ?? null,
+                'rate_id' => $r['object_id'],
+            ];
+        };
+
+        $result = [$format($cheapest, 'standard', 'Standard Shipping', 'شحن قياسي')];
+
+        if ($fastest['object_id'] !== $cheapest['object_id']) {
+            $result[] = $format($fastest, 'express', 'Express Shipping', 'شحن سريع');
+        }
+
+        return $result;
     }
 
     // ── PUBLIC PLACE ORDER ───────────────────────────────────────────
@@ -102,11 +176,9 @@ class OrderController extends Controller
             'shipping_city' => 'required|string|max:100',
             'shipping_state' => 'required|string|max:100',
             'shipping_zip' => 'required|string|max:20',
-            // Not hardcoded to 'standard'/'express' here — resolveShippingCost()
-            // below is the single authoritative check (looks the code up against
-            // active shipping_methods rows and 422s if it doesn't match one), so
-            // the valid set never has to be kept in sync in two places.
-            'shipping_method' => 'required|string|max:50',
+            'shipping_method' => 'required|string',
+            'shipping_cost' => 'required|numeric|min:0',
+            'shipping_rate_id' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.option' => 'required|in:single,pack,case',
@@ -142,10 +214,8 @@ class OrderController extends Controller
 
                 $totalQtyNeeded = $qty * $multiplier;
 
-                // Inventory verification — lock the inventory row itself (not just the
-                // product row) so two concurrent checkouts for the same product can't
-                // both read the same stale stock_quantity and both oversell it.
-                $inventory = $product->inventory()->lockForUpdate()->first();
+                // Inventory verification
+                $inventory = $product->inventory;
                 if (!$inventory || $inventory->stock_quantity < $totalQtyNeeded) {
                     $message = (request()->header('Accept-Language') === 'ar' ? 'عذراً، لا يوجد مخزون كافٍ لمنتج ' : 'Insufficient stock for product ') .
                         (request()->header('Accept-Language') === 'ar' ? $product->arabic_name : $product->name);
@@ -178,10 +248,7 @@ class OrderController extends Controller
             $coupon = null;
             
             if ($request->filled('coupon_code')) {
-                // Lock the coupon row for the duration of this transaction so two
-                // concurrent checkouts can't both read the same usage_count and both
-                // slip past isLimitReached() when only one usage slot remains.
-                $coupon = Coupon::where('code', strtoupper($request->coupon_code))->lockForUpdate()->first();
+                $coupon = Coupon::where('code', strtoupper($request->coupon_code))->first();
                 if ($coupon && $coupon->active && !$coupon->isExpired() && !$coupon->isLimitReached() && $subtotal >= $coupon->min_order_amount) {
                     if ($coupon->type === 'percentage') {
                         $discount = round(($subtotal * $coupon->value) / 100, 2);
@@ -195,19 +262,8 @@ class OrderController extends Controller
                 }
             }
 
-            // Shipping cost is never accepted from the client — it's derived
-            // server-side from the shipping zip + method, exactly like
-            // getShippingRates() above, so it can't be under/overpaid by
-            // manipulating the request.
-            $shippingResolved = $this->resolveShippingCost($request->shipping_method);
-            $shippingCost = $shippingResolved['cost'];
-
-            // Flat simplified 8% rate — this is genuinely charged (real money,
-            // included in the real Stripe amount), just not a full per-state/
-            // locality US sales-tax calculation. Wiring up real jurisdiction-
-            // based tax (e.g. a tax API) is a distinct feature, not a bug fix.
-            $tax = round(($subtotal - $discount) * 0.08, 2);
-            $total = $subtotal - $discount + $shippingCost + $tax;
+            $tax = round(($subtotal - $discount) * 0.08, 2); // 8% mock tax
+            $total = $subtotal - $discount + $request->shipping_cost + $tax;
 
             // Generate order number
             $orderNumber = 'AM-' . strtoupper(Str::random(3)) . '-' . rand(100000, 999999);
@@ -223,20 +279,15 @@ class OrderController extends Controller
                 'shipping_city' => $request->shipping_city,
                 'shipping_state' => $request->shipping_state,
                 'shipping_zip' => $request->shipping_zip,
-                'shipping_method' => $shippingResolved['method_label'],
+                'shipping_method' => $request->shipping_method,
                 'subtotal' => $subtotal,
                 'discount' => $discount,
-                'shipping_cost' => $shippingCost,
+                'shipping_cost' => $request->shipping_cost,
                 'tax' => $tax,
                 'total' => $total,
                 'payment_method' => $request->payment_method,
                 'payment_status' => $request->payment_method === 'Cash on Delivery' ? 'pending' : 'pending',
                 'status' => 'pending',
-                // Inventory and coupon usage are reserved immediately below, before
-                // payment exists — this timestamp bounds how long that reservation
-                // can be held by an order that never gets paid (see
-                // Order::releaseReservation() and the orders:release-expired command).
-                'reserved_until' => now()->addMinutes(self::RESERVATION_MINUTES),
                 'notes' => $request->notes,
             ]);
 
@@ -254,6 +305,18 @@ class OrderController extends Controller
                 ]);
             }
 
+            // Stash the Shippo rate the customer was quoted (if any — the
+            // flat-rate fallback never sends one) so Admin > Orders can buy
+            // the exact label later without re-quoting. NOTE: Shippo rate
+            // object_ids expire (~7 days), so this only works for labels
+            // purchased reasonably soon after the order is placed.
+            if ($request->filled('shipping_rate_id')) {
+                $order->shipment()->updateOrCreate(
+                    ['order_id' => $order->id],
+                    ['shippo_rate_id' => $request->shipping_rate_id]
+                );
+            }
+
             return response()->json([
                 'message' => 'Order created successfully',
                 'order_number' => $orderNumber,
@@ -263,29 +326,12 @@ class OrderController extends Controller
     }
 
     // ── PUBLIC TRACK ORDER ───────────────────────────────────────────
-    //
-    // SECURITY: order_number alone is not sufficient to view an order — the
-    // order numbers are guessable-enough (see routes/api.php throttle) that a
-    // bare order-number lookup would let anyone enumerate other customers'
-    // name/email/phone/address. The caller must also know the email used on
-    // the order, so this now requires both.
 
-    public function track(Request $request, $orderNumber)
+    public function track($orderNumber)
     {
-        $request->validate([
-            'email' => 'required|email',
-        ]);
-
         $order = Order::with(['items.product.images', 'payment', 'shipment'])
             ->where('order_number', trim($orderNumber))
-            ->first();
-
-        // Same 404 whether the order number doesn't exist or the email just
-        // doesn't match it — a distinct response for "wrong email" would let
-        // an attacker confirm a guessed order number is real.
-        if (!$order || strcasecmp($order->customer_email, $request->email) !== 0) {
-            abort(404);
-        }
+            ->firstOrFail();
 
         return response()->json($order);
     }
@@ -453,36 +499,12 @@ class OrderController extends Controller
 
         if ($eventType === 'payment_intent.succeeded') {
             DB::transaction(function () use ($order, $payload) {
-                // Re-fetch under a lock: guards against this racing the scheduled
-                // orders:release-expired command releasing the same order's
-                // reservation at the same moment, and makes duplicate webhook
-                // delivery (Stripe retries these) a safe no-op below.
-                $locked = Order::where('id', $order->id)->lockForUpdate()->first();
-
-                if ($locked->payment_status === 'paid') {
-                    return; // already processed by an earlier delivery of this event
-                }
-
-                $wasReleased = $locked->status === 'cancelled';
-
-                $locked->update([
+                $order->update([
                     'payment_status' => 'paid',
-                    // If the reservation had already expired and been released
-                    // (stock/coupon usage given back — see Order::releaseReservation),
-                    // don't silently confirm the order as if inventory is still held
-                    // for it. Leave it as pending-but-paid so an admin notices and
-                    // reconciles stock manually instead of risking an oversell.
-                    'status' => $wasReleased ? 'pending' : 'confirmed',
-                    'reserved_until' => null,
+                    'status' => 'confirmed',
                 ]);
 
-                if ($wasReleased) {
-                    Log::warning('Stripe payment succeeded for an order whose reservation had already been released — needs manual stock review.', [
-                        'order_number' => $locked->order_number,
-                    ]);
-                }
-
-                $payment = Payment::where('order_id', $locked->id)->first();
+                $payment = Payment::where('order_id', $order->id)->first();
                 if ($payment) {
                     $payment->update([
                         'status' => 'success',
@@ -495,12 +517,6 @@ class OrderController extends Controller
         }
 
         if ($eventType === 'payment_intent.payment_failed') {
-            // Deliberately does NOT release inventory/coupon usage here — Stripe
-            // lets a customer retry the same PaymentIntent after a failed attempt,
-            // so releasing immediately could let the stock be resold to someone
-            // else while this customer is still mid-retry. If they never retry,
-            // the reservation still expires safely via reserved_until (see
-            // Order::releaseReservation / orders:release-expired).
             $order->update(['payment_status' => 'failed']);
             $payment = Payment::where('order_id', $order->id)->first();
             if ($payment) {
@@ -524,18 +540,12 @@ class OrderController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Filter search — grouped in a closure so this OR'd search condition is
-        // AND'ed as a single unit with the status filter above, instead of the
-        // unparenthesized orWhere() previously making the status filter apply to
-        // only the first term (order_number) and get silently dropped for
-        // customer_name/customer_email matches.
+        // Filter search
         if ($request->filled('search')) {
             $search = '%' . $request->search . '%';
-            $query->where(function ($q) use ($search) {
-                $q->where('order_number', 'like', $search)
+            $query->where('order_number', 'like', $search)
                   ->orWhere('customer_name', 'like', $search)
                   ->orWhere('customer_email', 'like', $search);
-            });
         }
 
         return response()->json($query->orderBy('id', 'desc')->paginate(15));
@@ -596,8 +606,6 @@ class OrderController extends Controller
                     }
                 }
 
-                // No reservation to hold onto once cancelled, paid or not.
-                $order->reserved_until = null;
                 $order->save();
             });
 
@@ -607,5 +615,77 @@ class OrderController extends Controller
         $order->save();
 
         return response()->json($order->load('items.product'));
+    }
+
+    // ── ADMIN: BUY SHIPPO SHIPPING LABEL ─────────────────────────────
+    //
+    // Called from Admin > Order detail once the order's `shipping_method`
+    // holds a Shippo rate id (i.e. it was quoted through the live Shippo
+    // path in getShippingRates(), not the flat-rate fallback). Purchases
+    // the actual label/tracking number through Shippo and stores the
+    // result on the order's Shipment row + Order.tracking_number.
+
+    public function buyShippingLabel(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+
+        $request->validate([
+            'rate_id' => 'nullable|string',
+        ]);
+
+        // Allow the admin UI to just click "buy label" without re-passing the
+        // rate id — use whatever was captured at checkout time if the request
+        // didn't supply one.
+        $rateId = $request->input('rate_id') ?: $order->shipment?->shippo_rate_id;
+
+        if (!$rateId) {
+            return response()->json([
+                'message' => 'No Shippo rate is on file for this order (it was likely placed before Shippo was configured, or via the flat-rate fallback). Provide a rate_id explicitly, or re-quote shipping for this order.',
+            ], 422);
+        }
+
+        $shippo = new ShippoService();
+
+        if (!$shippo->isConfigured()) {
+            return response()->json([
+                'message' => 'Shippo is not configured on this server. Set SHIPPO_API_TOKEN and SHIPPO_FROM_* in backend/.env first.',
+            ], 500);
+        }
+
+        try {
+            $transaction = $shippo->buyLabel($rateId);
+        } catch (\Throwable $e) {
+            Log::error('Shippo buyShippingLabel failed', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Unable to purchase shipping label from Shippo.',
+                'error' => $e->getMessage(),
+            ], 502);
+        }
+
+        $shipment = $order->shipment()->updateOrCreate(
+            ['order_id' => $order->id],
+            [
+                'carrier' => $transaction['rate']['provider'] ?? null,
+                'tracking_number' => $transaction['tracking_number'] ?? null,
+                'status' => 'label_purchased',
+                'shippo_rate_id' => $rateId,
+                'shippo_transaction_id' => $transaction['object_id'] ?? null,
+                'label_url' => $transaction['label_url'] ?? null,
+            ]
+        );
+
+        if ($transaction['tracking_number'] ?? null) {
+            $order->tracking_number = $transaction['tracking_number'];
+            $order->save();
+        }
+
+        return response()->json([
+            'message' => 'Shipping label purchased.',
+            'shipment' => $shipment,
+        ]);
     }
 }

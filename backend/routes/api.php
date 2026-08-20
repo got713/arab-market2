@@ -125,7 +125,8 @@ Route::prefix('v1')->group(function () {
             // Orders admin
             Route::get('/admin/orders', [OrderController::class, 'adminOrders']);
             Route::put('/admin/orders/{id}/status', [OrderController::class, 'updateOrderStatus']);
-            
+            Route::post('/admin/orders/{id}/shipping-label', [OrderController::class, 'buyShippingLabel']);
+
             // Coupon CRUD
             Route::get('/admin/coupons', [CouponController::class, 'index']);
             Route::post('/admin/coupons', [CouponController::class, 'store']);
