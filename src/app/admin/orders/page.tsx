@@ -5,7 +5,7 @@ import { Order } from '@/types';
 import { OrderService } from '@/services/orders';
 import { formatDate, formatPrice } from '@/lib/utils';
 import { useLocaleStore } from '@/store/locale-store';
-import { Eye, FileText, CheckCircle, XCircle, Clock, ClipboardList } from 'lucide-react';
+import { Eye, FileText, CheckCircle, XCircle, Clock, ClipboardList, Printer } from 'lucide-react';
 
 export default function AdminOrdersPage() {
   const { locale } = useLocaleStore();
@@ -189,14 +189,31 @@ export default function AdminOrdersPage() {
       {/* Invoice Details Modal */}
       {isModalOpen && selectedOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs fade-in overflow-y-auto">
-          <div className="relative w-full max-w-xl bg-white rounded-xl shadow-2xl border border-light-border overflow-hidden my-8">
+          <style>{`
+            @media print {
+              body * { visibility: hidden; }
+              #invoice-print-area, #invoice-print-area * { visibility: visible; }
+              #invoice-print-area {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                max-width: 100%;
+                margin: 0;
+                padding: 24px;
+                box-shadow: none;
+                border: none;
+              }
+              .no-print { display: none !important; }
+            }
+          `}</style>
+          <div id="invoice-print-area" className="relative w-full max-w-xl bg-white rounded-xl shadow-2xl border border-light-border overflow-hidden my-8">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-light-border bg-cream" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
               <span className="font-bold text-sm text-primary uppercase tracking-wider flex items-center gap-1.5">
                 <FileText className="w-4.5 h-4.5 text-gold" />
                 <span>{locale === 'ar' ? 'تفاصيل فاتورة العميل' : 'Invoice Details'} ({selectedOrder.id})</span>
               </span>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-dark">
+              <button onClick={() => setIsModalOpen(false)} className="no-print text-gray-400 hover:text-dark">
                 <XCircle className="w-5 h-5 text-gray-500 hover:text-red-650 transition-colors" />
               </button>
             </div>
@@ -273,7 +290,7 @@ export default function AdminOrdersPage() {
               </div>
 
               {/* Actions Footer */}
-              <div className="flex justify-between items-center pt-4 border-t border-light-border">
+              <div className="no-print flex justify-between items-center pt-4 border-t border-light-border">
                 <div className="flex items-center gap-2">
                   <span className="text-gray-400 font-bold">{locale === 'ar' ? 'الحالة:' : 'Status:'}</span>
                   <select
@@ -289,12 +306,21 @@ export default function AdminOrdersPage() {
                     <option value="Cancelled">{locale === 'ar' ? 'إلغاء الطلب' : 'Cancelled'}</option>
                   </select>
                 </div>
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-1.5 bg-primary text-cream font-bold rounded-lg hover:bg-primary-dark transition-colors"
-                >
-                  {locale === 'ar' ? 'إغلاق الفاتورة' : 'Close Invoice'}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => window.print()}
+                    className="px-4 py-1.5 border border-gray-350 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition-colors inline-flex items-center gap-1.5"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-gold" />
+                    <span>{locale === 'ar' ? 'طباعة الفاتورة' : 'Print Invoice'}</span>
+                  </button>
+                  <button
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-1.5 bg-primary text-cream font-bold rounded-lg hover:bg-primary-dark transition-colors"
+                  >
+                    {locale === 'ar' ? 'إغلاق الفاتورة' : 'Close Invoice'}
+                  </button>
+                </div>
               </div>
 
             </div>
