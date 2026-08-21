@@ -144,17 +144,17 @@ export default function HomePage() {
           <div className="relative mx-auto max-w-md md:max-w-none flex justify-center w-full">
             <div className="w-full aspect-[4/3] rounded-2xl bg-white border border-light-border/80 shadow-lg overflow-hidden flex items-center justify-center relative p-1.5 bg-[#FAF7F0]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img 
-                src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800" 
-                alt="Middle Eastern Supermarket" 
+              <img
+                src="/images/hero-middle-eastern-groceries.jpg"
+                alt="Middle Eastern Groceries Aisle"
                 className="w-full h-full object-cover rounded-xl"
               />
               <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-xs border border-light-border/60 p-3.5 rounded-xl flex items-center justify-between gap-4 shadow-sm">
                 <div>
-                  <span className="block text-[10px] text-muted-text font-bold uppercase tracking-wider">Cairo Selection</span>
-                  <strong className="block text-xs text-primary font-bold mt-0.5">{isAr ? 'توابل ومأكولات شرقية ممتازة' : 'Premium Eastern Spices & Food'}</strong>
+                  <span className="block text-[10px] text-muted-text font-bold uppercase tracking-wider">Arab Market Selection</span>
+                  <strong className="block text-xs text-primary font-bold mt-0.5">{isAr ? 'أرز، معلبات، شاي وتوابل أصلية' : 'Rice, Canned Goods, Tea & Pantry Staples'}</strong>
                 </div>
-                <span className="text-xs font-black text-gold font-mono">$4.99+</span>
+                <span className="text-xs font-black text-gold font-mono">500+ {isAr ? 'منتج' : 'items'}</span>
               </div>
             </div>
           </div>
