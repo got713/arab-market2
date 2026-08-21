@@ -121,17 +121,17 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* ── Body ──────────────────────────────────────────────── */}
         <div className="p-3.5 flex-1 flex flex-col gap-2">
 
-          {/* Brand */}
-          <span className="text-[10px] text-muted-text font-bold uppercase tracking-wider">
-            {product.brand}
-          </span>
-
           {/* Title */}
           <Link href={`/product/${product.slug}`} className="block">
             <h3 className="font-bold text-xs sm:text-[15px] text-dark hover:text-primary transition-colors leading-snug line-clamp-2">
               {isAr ? product.arabicName : product.name}
             </h3>
           </Link>
+
+          {/* Brand */}
+          <span className="text-[10px] text-muted-text font-bold uppercase tracking-wider">
+            {product.brand}
+          </span>
 
           {/* Rating */}
           <div className="flex items-center gap-1.5">
@@ -217,10 +217,10 @@ export default function ProductCard({ product }: ProductCardProps) {
               <X className="w-5 h-5" />
             </button>
             <div className="space-y-1 pr-8 rtl:pr-0 rtl:pl-8">
-              <strong className="block text-[10px] text-gold font-bold uppercase tracking-wider leading-none">{product.brand}</strong>
               <h3 className="font-bold text-sm sm:text-base text-primary font-cairo">
                 {isAr ? product.arabicName : product.name}
               </h3>
+              <strong className="block text-[10px] text-gold font-bold uppercase tracking-wider leading-none">{product.brand}</strong>
               <span className="block text-xs text-muted-text font-medium">{product.weight}</span>
             </div>
             
