@@ -85,15 +85,19 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* ── Image ─────────────────────────────────────────────── */}
         <div className="relative aspect-square bg-[#FAF7F0]/40 overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={product.images[0]}
-            alt={isAr ? product.arabicName : product.name}
-            className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://placehold.co/400x400/FDF8F0/6B6355?text=No+Image';
-            }}
-          />
+          {/* Image itself links to the product page too — customers shouldn't
+              have to hit the exact title text to open a product. */}
+          <Link href={`/product/${product.slug}`} className="block w-full h-full">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={product.images[0]}
+              alt={isAr ? product.arabicName : product.name}
+              className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://placehold.co/400x400/FDF8F0/6B6355?text=No+Image';
+              }}
+            />
+          </Link>
 
           {/* Wishlist button */}
           <button
