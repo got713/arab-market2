@@ -45,6 +45,7 @@ export interface Product {
   rating: number;
   reviews: ProductReview[];
   weight: string;
+  weightGrams?: number | null; // Real numeric shipping weight in grams — used by the live shipping-rate calculator
   sellingUnit?: SellingUnit;
   imageDetails?: ProductImageDetail[];
   ingredients: string;

@@ -62,6 +62,7 @@ export default function AdminProductsPage() {
   const [arabicDescription, setArabicDescription] = useState('');
   const [sellingUnit, setSellingUnit]           = useState<SellingUnit>('piece');
   const [weight, setWeight]                     = useState('');
+  const [weightGrams, setWeightGrams]           = useState('');
   const [ingredients, setIngredients]           = useState('');
   const [allergens, setAllergens]               = useState('');
   const [stock, setStock]                       = useState(100);
@@ -117,7 +118,7 @@ export default function AdminProductsPage() {
     setCategory(categoriesList[0]?.slug || 'groceries'); setSubcategory(''); setCountry('Egypt');
     setDescription(''); setArabicDescription('');
     setSellingUnit('piece');
-    setWeight(''); setIngredients(''); setAllergens('');
+    setWeight(''); setWeightGrams(''); setIngredients(''); setAllergens('');
     setStock(100); setFeatured(false); setBestSeller(false); setWeeklyDeal(false); setSku('');
     setSingleOpt(defaultOption('single'));
     setPackOpt(defaultOption('pack'));
@@ -139,6 +140,7 @@ export default function AdminProductsPage() {
     setArabicDescription(prod.arabicDescription);
     setSellingUnit(prod.sellingUnit || 'piece');
     setWeight(prod.weight);
+    setWeightGrams(prod.weightGrams != null ? String(prod.weightGrams) : '');
     setIngredients(prod.ingredients); setAllergens(prod.allergens);
     setStock(prod.stock); setFeatured(prod.featured); setBestSeller(prod.bestSeller);
     setWeeklyDeal(prod.weeklyDeal === true); setSku(prod.sku || '');
@@ -198,7 +200,9 @@ export default function AdminProductsPage() {
       sellingUnit,
       rating: editingProduct?.rating ?? 4.5,
       reviews: editingProduct?.reviews ?? [],
-      weight, ingredients, allergens,
+      weight,
+      weightGrams: weightGrams.trim() ? Number(weightGrams) : null,
+      ingredients, allergens,
       purchaseOptions,
       price: singleOpt.price,
       packPrice: packOpt.price,
@@ -704,7 +708,7 @@ export default function AdminProductsPage() {
               </div>
 
               {/* SKU, Weight & Selling Unit */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-4 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">SKU / Item Code</label>
                   <input value={sku} placeholder="e.g. ME-GROC-102" onChange={(e) => setSku(e.target.value)}
@@ -713,6 +717,14 @@ export default function AdminProductsPage() {
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase">Weight / Size *</label>
                   <input required value={weight} placeholder="e.g. 450g or 1 Liter" onChange={(e) => setWeight(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase">
+                    {isAr ? 'الوزن للشحن (جرام)' : 'Shipping Weight (grams)'}
+                  </label>
+                  <input type="number" min={0} step="1" value={weightGrams} placeholder="e.g. 500"
+                    onChange={(e) => setWeightGrams(e.target.value)}
                     className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300" />
                 </div>
                 <div className="space-y-1">
