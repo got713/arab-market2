@@ -56,4 +56,24 @@ export const PaymentService = {
       locale
     );
   },
+
+  /**
+   * Called right after Stripe.js confirms the payment succeeded (see
+   * checkout/page.tsx handlePaymentSuccess) — tells the backend to
+   * independently re-verify the PaymentIntent with Stripe, mark the order
+   * paid, and send the order-confirmation emails. Doesn't rely on the Stripe
+   * Dashboard webhook being configured correctly, which is easy to get wrong.
+   * Best-effort from the caller's side: a failure here should never block the
+   * customer from seeing their order-success page, since the order and
+   * payment already succeeded — just log/ignore and let the (also-existing)
+   * webhook catch it eventually if this call fails.
+   */
+  confirmPayment: async (orderNumber: string, locale: 'en' | 'ar' = 'en'): Promise<{ status: string }> => {
+    return ApiClient.post<{ status: string }>(
+      `/orders/${orderNumber}/confirm-payment`,
+      {},
+      undefined,
+      locale
+    );
+  },
 };

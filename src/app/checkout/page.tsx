@@ -162,6 +162,15 @@ export default function CheckoutPage() {
   const handlePaymentSuccess = () => {
     clearCart();
     if (placedOrder) {
+      // Best-effort: tells the backend to verify the payment with Stripe and
+      // send the order-confirmation emails. Never blocks navigation — the
+      // customer already paid successfully (Stripe.js just confirmed that),
+      // so a hiccup here shouldn't stop them from seeing their order-success
+      // page. The webhook is still a backup path if this call fails.
+      PaymentService.confirmPayment(placedOrder.id).catch((err) => {
+        console.error('confirmPayment failed (non-blocking):', err);
+      });
+
       router.push(`/order-success?id=${placedOrder.id}&email=${encodeURIComponent(placedOrder.customer.email)}`);
     }
   };
