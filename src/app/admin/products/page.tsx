@@ -196,7 +196,15 @@ export default function AdminProductsPage() {
       categoryId: catObj?.id || category, 
       subcategoryId: subcategory || undefined,
       country, origin: country, description, arabicDescription,
-      images: editingProduct?.images ?? [],
+      // Use the live productImages state (kept in sync by the real upload/
+      // reorder/delete endpoints), never editingProduct.images — that field
+      // is just a snapshot of image URLs from whenever the product was last
+      // loaded/created, and can be a stale placeholder ("No Image") from a
+      // product that was saved with zero images before any real photo was
+      // uploaded. Sending that stale value here would make the backend's
+      // "delete old images, recreate from this list" sync wipe out a real
+      // uploaded photo and replace it with the placeholder again.
+      images: productImages.map((img) => img.url),
       sellingUnit,
       rating: editingProduct?.rating ?? 4.5,
       reviews: editingProduct?.reviews ?? [],
