@@ -797,8 +797,8 @@ export default function AdminProductsPage() {
                   <>
                     <p className="text-[10px] text-muted-text">
                       {isAr
-                        ? 'JPG, PNG أو WebP فقط، بحد أقصى 5 ميجابايت لكل صورة. أول صورة تُرفع تصبح الصورة الرئيسية تلقائياً.'
-                        : 'JPG, PNG, or WebP only, max 5MB each. The first image uploaded becomes primary automatically.'}
+                        ? 'JPG, PNG أو WebP فقط، بحد أقصى 15 ميجابايت لكل صورة. أول صورة تُرفع تصبح الصورة الرئيسية تلقائياً.'
+                        : 'JPG, PNG, or WebP only, max 15MB each. The first image uploaded becomes primary automatically.'}
                     </p>
 
                     {productImages.length > 0 && (
