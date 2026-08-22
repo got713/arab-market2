@@ -187,13 +187,20 @@ export default function AdminProductsPage() {
     };
 
     const catObj = categoriesList.find(c => c.slug === category);
+    if (!catObj) {
+      // category_id must be a real numeric category id on the backend
+      // (required|exists:categories,id) — sending the slug as a fallback
+      // here used to 422 with no clear explanation. Block early instead.
+      setSaveError(isAr ? 'اختاري قسم صحيح من القائمة قبل الحفظ.' : 'Please select a valid category before saving.');
+      return;
+    }
 
     const payload: Omit<Product, 'id'> = {
       name, arabicName,
       slug: slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-      brand, 
-      category, 
-      categoryId: catObj?.id || category, 
+      brand,
+      category,
+      categoryId: catObj.id,
       subcategoryId: subcategory || undefined,
       country, origin: country, description, arabicDescription,
       // Use the live productImages state (kept in sync by the real upload/
@@ -235,7 +242,17 @@ export default function AdminProductsPage() {
       }
       loadData();
     } catch (err: any) {
-      setSaveError(err.message || 'Error saving product');
+      // Laravel validation failures (422) carry a per-field `errors` map —
+      // surface the actual field + reason instead of the generic top-level
+      // message, so a rejected save is self-diagnosable from the form alone.
+      if (err.errors && typeof err.errors === 'object') {
+        const details = Object.entries(err.errors)
+          .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(', ')}`)
+          .join(' | ');
+        setSaveError(details || err.message || 'Error saving product');
+      } else {
+        setSaveError(err.message || 'Error saving product');
+      }
     }
   };
 
