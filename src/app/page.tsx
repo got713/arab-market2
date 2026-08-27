@@ -10,20 +10,22 @@ import { useCartStore } from '@/store/cart-store';
 import { useAuthStore } from '@/store/auth-store';
 import ProductCard from '@/components/products/product-card';
 import { formatPrice } from '@/lib/utils';
-import { 
-  ArrowRight, 
-  Search, 
-  Star, 
-  Sparkles, 
-  Truck, 
-  ShieldCheck, 
-  ShoppingBag, 
+import {
+  ArrowRight,
+  Search,
+  Star,
+  Sparkles,
+  Truck,
+  ShieldCheck,
+  ShoppingBag,
   CheckCircle,
   ThumbsUp,
   Clock,
   Layers,
   Heart,
-  Plus
+  Plus,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -34,10 +36,10 @@ export default function HomePage() {
   const [bestSellers, setBestSellers] = useState<Product[]>([]);
   const [egyptianFavorites, setEgyptianFavorites] = useState<Product[]>([]);
   const [buyAgainProducts, setBuyAgainProducts] = useState<Product[]>([]);
-  const [marqueeProducts, setMarqueeProducts] = useState<Product[]>([]);
-  const [marqueeProducts2, setMarqueeProducts2] = useState<Product[]>([]);
+  const [carouselProducts, setCarouselProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [homeSearchQuery, setHomeSearchQuery] = useState('');
+  const carouselRef = React.useRef<HTMLDivElement>(null);
 
   const { isAuthenticated, user } = useAuthStore();
   const { getSubtotal } = useCartStore();
@@ -91,12 +93,14 @@ export default function HomePage() {
           setBuyAgainProducts(allProds.slice(2, 6));
         }
 
-        // 4. Scrolling marquee strips: same top-up logic, just a bigger
-        // target since the strip loops continuously rather than filling a
-        // fixed grid.
-        const MARQUEE_TARGET_COUNT = 16;
-        setMarqueeProducts(fillList(allProds.filter((p) => p.featured), MARQUEE_TARGET_COUNT));
-        setMarqueeProducts2(fillList(allProds.filter((p) => p.bestSeller), MARQUEE_TARGET_COUNT));
+        // 4. Product carousel: replaces the old two auto-scrolling marquee
+        // strips with one arrow-controlled row. Same top-up logic (start
+        // from featured/best-seller, fill the rest randomly) so it always
+        // shows a full set of products regardless of admin tagging.
+        const CAROUSEL_TARGET_COUNT = 16;
+        setCarouselProducts(
+          fillList(allProds.filter((p) => p.featured || p.bestSeller), CAROUSEL_TARGET_COUNT)
+        );
       } catch (err) {
         console.error('Failed to load homepage data:', err);
       } finally {
@@ -224,136 +228,79 @@ export default function HomePage() {
         </form>
       </section>
 
-      {/* 2.5 SCROLLING PRODUCT MARQUEE — an always-full-looking strip that
-          auto-scrolls through the catalog regardless of tags/flags, so a
-          visitor sees "lots of products" immediately, even before the
-          curated (and sometimes sparse) sections below load in. Pauses on
-          hover so a product is still clickable. The product list is
-          rendered twice back-to-back and the animation moves exactly one
-          copy's width, so the loop has no visible seam. */}
-      {!loading && (marqueeProducts.length > 0 || marqueeProducts2.length > 0) && (
-        <section className="border-y border-light-border/60 bg-white py-8 overflow-hidden space-y-5">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-            <h2 className="text-sm sm:text-base font-black text-primary font-cairo uppercase tracking-wide">
-              {isAr ? 'تصفح تشكيلتنا الواسعة' : 'Browse Our Wide Selection'}
-            </h2>
-            <Link href="/shop" className="text-xs font-bold text-primary hover:text-gold flex items-center gap-0.5 shrink-0">
-              <span>{isAr ? 'عرض كل المنتجات' : 'View All Products'}</span>
-              <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
-            </Link>
+      {/* 2.5 PRODUCT CAROUSEL — replaces the old auto-scrolling CSS marquee.
+          That approach (two duplicated tracks + a CSS keyframe animation)
+          kept showing up empty in some cases with no clear single cause, and
+          fighting it further wasn't worth it. This is a plain horizontal
+          scroll container: nothing auto-plays, nothing depends on measuring
+          "half the track width" — the user moves it themselves with the
+          arrow buttons (native `scrollBy`), so if the product list ever
+          renders empty it's simply because there are zero products, not a
+          layout/animation edge case. */}
+      {!loading && carouselProducts.length > 0 && (
+        <section className="border-y border-light-border/60 bg-white py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm sm:text-base font-black text-primary font-cairo uppercase tracking-wide">
+                {isAr ? 'تصفح تشكيلتنا الواسعة' : 'Browse Our Wide Selection'}
+              </h2>
+              <div className="flex items-center gap-2">
+                <Link href="/shop" className="text-xs font-bold text-primary hover:text-gold flex items-center gap-0.5 shrink-0 mr-2 rtl:mr-0 rtl:ml-2">
+                  <span>{isAr ? 'عرض كل المنتجات' : 'View All Products'}</span>
+                  <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
+                </Link>
+                <button
+                  type="button"
+                  aria-label={isAr ? 'السابق' : 'Previous'}
+                  onClick={() => carouselRef.current?.scrollBy({ left: isAr ? 240 : -240, behavior: 'smooth' })}
+                  className="w-8 h-8 rounded-full border border-light-border bg-white hover:bg-[#FAF7F0] hover:border-gold flex items-center justify-center transition-colors shrink-0"
+                >
+                  <ChevronLeft className="w-4 h-4 text-primary rtl:rotate-180" />
+                </button>
+                <button
+                  type="button"
+                  aria-label={isAr ? 'التالي' : 'Next'}
+                  onClick={() => carouselRef.current?.scrollBy({ left: isAr ? -240 : 240, behavior: 'smooth' })}
+                  className="w-8 h-8 rounded-full border border-light-border bg-white hover:bg-[#FAF7F0] hover:border-gold flex items-center justify-center transition-colors shrink-0"
+                >
+                  <ChevronRight className="w-4 h-4 text-primary rtl:rotate-180" />
+                </button>
+              </div>
+            </div>
+
+            <div
+              ref={carouselRef}
+              className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {carouselProducts.map((product) => (
+                <Link
+                  key={product.id}
+                  href={`/product/${product.slug}`}
+                  className="group bg-white border border-light-border rounded-xl overflow-hidden hover:border-gold hover:shadow-md transition-all shrink-0 snap-start w-[140px] sm:w-[168px]"
+                >
+                  <div className="w-full aspect-square bg-[#FAF7F0]/40 overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={product.images?.[0]}
+                      alt={isAr ? product.arabicName : product.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://placehold.co/300x300/FDF8F0/6B6355?text=No+Image';
+                      }}
+                    />
+                  </div>
+                  <div className="p-2.5">
+                    <strong className="block text-xs text-dark font-bold font-cairo leading-tight line-clamp-1">
+                      {isAr ? product.arabicName : product.name}
+                    </strong>
+                    <span className="block text-xs font-black text-primary mt-1">
+                      {formatPrice(product.purchaseOptions?.single?.price ?? 0, locale)}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
-
-          {/* Strip 1: admin's "Featured" products, scrolling one way */}
-          {marqueeProducts.length > 0 && (
-            <div className="marquee-viewport">
-              <div className="marquee-track">
-                {[...marqueeProducts, ...marqueeProducts].map((product, idx) => (
-                  <Link
-                    key={`m1-${product.id}-${idx}`}
-                    href={`/product/${product.slug}`}
-                    className="marquee-item group bg-white border border-light-border rounded-xl overflow-hidden hover:border-gold hover:shadow-md transition-all shrink-0"
-                  >
-                    <div className="w-full aspect-square bg-[#FAF7F0]/40 overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={product.images?.[0]}
-                        alt={isAr ? product.arabicName : product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://placehold.co/300x300/FDF8F0/6B6355?text=No+Image';
-                        }}
-                      />
-                    </div>
-                    <div className="p-2.5">
-                      <strong className="block text-xs text-dark font-bold font-cairo leading-tight line-clamp-1">
-                        {isAr ? product.arabicName : product.name}
-                      </strong>
-                      <span className="block text-xs font-black text-primary mt-1">
-                        {formatPrice(product.purchaseOptions?.single?.price ?? 0, locale)}
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Strip 2: admin's "Best Seller" products, scrolling the opposite way */}
-          {marqueeProducts2.length > 0 && (
-            <div className="marquee-viewport">
-              <div className="marquee-track marquee-track-reverse">
-                {[...marqueeProducts2, ...marqueeProducts2].map((product, idx) => (
-                  <Link
-                    key={`m2-${product.id}-${idx}`}
-                    href={`/product/${product.slug}`}
-                    className="marquee-item group bg-white border border-light-border rounded-xl overflow-hidden hover:border-gold hover:shadow-md transition-all shrink-0"
-                  >
-                    <div className="w-full aspect-square bg-[#FAF7F0]/40 overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={product.images?.[0]}
-                        alt={isAr ? product.arabicName : product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://placehold.co/300x300/FDF8F0/6B6355?text=No+Image';
-                        }}
-                      />
-                    </div>
-                    <div className="p-2.5">
-                      <strong className="block text-xs text-dark font-bold font-cairo leading-tight line-clamp-1">
-                        {isAr ? product.arabicName : product.name}
-                      </strong>
-                      <span className="block text-xs font-black text-primary mt-1">
-                        {formatPrice(product.purchaseOptions?.single?.price ?? 0, locale)}
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <style>{`
-            /* Padding lives on the viewport (fixed-width, doesn't affect the
-               track's own measured width) rather than on the track itself.
-               Putting it on the track used to add 2rem to the track's total
-               width unevenly around the two duplicated product sets, so the
-               halfway point of the translateX animation didn't line up
-               exactly with the seam between the two copies — that mismatch
-               is what caused the visible jump/gap once the loop restarted.
-               With the padding moved here, the track's width is purely two
-               equal copies of the product set, so -50% always lands exactly
-               on the seam and the loop is invisible. */
-            .marquee-viewport {
-              width: 100%;
-              overflow: hidden;
-              padding: 0 1rem;
-              -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
-              mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
-            }
-            .marquee-track {
-              display: flex;
-              gap: 1rem;
-              width: max-content;
-              animation: marquee-scroll 22s linear infinite;
-            }
-            .marquee-track-reverse {
-              animation-direction: reverse;
-            }
-            .marquee-viewport:hover .marquee-track {
-              animation-play-state: paused;
-            }
-            .marquee-item {
-              width: 140px;
-            }
-            @media (min-width: 640px) {
-              .marquee-item { width: 168px; }
-            }
-            @keyframes marquee-scroll {
-              from { transform: translateX(0); }
-              to { transform: translateX(-50%); }
-            }
-          `}</style>
         </section>
       )}
 
