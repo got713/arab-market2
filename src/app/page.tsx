@@ -355,23 +355,25 @@ export default function HomePage() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-6">
           {[
-            { id: 'frozen-foods',        en: 'Frozen Foods',           ar: 'المجمدات والمثلجات',       descEn: 'Vegetables & meals',  descAr: 'خضار ووجبات',       img: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&q=80&w=300' },
-            { id: 'canned-foods',        en: 'Canned Foods',           ar: 'الأطعمة المعلبة',          descEn: 'Tuna, fava & hommos', descAr: 'تونة، فول وحمص',    img: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&q=80&w=300' },
-            { id: 'rice-pasta-grains',   en: 'Rice, Pasta & Grains',   ar: 'الأرز والمكرونة والحبوب',   descEn: 'Pasta, rice & grains', descAr: 'مكرونة، أرز وحبوب', img: 'https://images.unsplash.com/photo-1497802492746-aa584aa6ea22?auto=format&fit=crop&q=80&w=300' },
-            { id: 'dairy-eggs',          en: 'Dairy & Eggs',           ar: 'الألبان والأجبان',         descEn: 'Cheese & butter',     descAr: 'أجبان وزبدة',       img: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=300' },
-            { id: 'coffee-tea-drinks',   en: 'Coffee, Tea & Drinks',   ar: 'الشاي والقهوة والمشروبات', descEn: 'Tea, coffee & juices', descAr: 'شاي، قهوة وعصائر',  img: 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&q=80&w=300' },
-            { id: 'nuts-seeds-snacks',   en: 'Nuts, Seeds & Snacks',   ar: 'المكسرات واللب والتسالي',  descEn: 'Nuts & crunchy snacks', descAr: 'مكسرات ومقرمشات', img: 'https://images.unsplash.com/photo-1775210291462-af8fd54da403?auto=format&fit=crop&q=80&w=300' },
-            { id: 'sweets-biscuits',     en: 'Sweets & Biscuits',      ar: 'الحلويات والبسكويت',       descEn: 'Chocolate & baklava', descAr: 'شوكولاتة وبقلاوة',  img: 'https://images.unsplash.com/photo-1625414502495-0c35143e32d3?auto=format&fit=crop&q=80&w=300' },
-            { id: 'oils-spices-sauces',  en: 'Oils, Spices & Sauces',  ar: 'الزيوت والتوابل والصوصات', descEn: 'Herbs & oils',        descAr: 'أعشاب وزيوت',       img: 'https://images.unsplash.com/photo-1574484152510-903878da786c?auto=format&fit=crop&q=80&w=300' },
+            { id: 'frozen-foods',        en: 'Frozen Foods',           ar: 'المجمدات والمثلجات',       descEn: 'Vegetables & meals',  descAr: 'خضار ووجبات',       img: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&q=85&w=400' },
+            { id: 'canned-foods',        en: 'Canned Foods',           ar: 'الأطعمة المعلبة',          descEn: 'Tuna, fava & hommos', descAr: 'تونة، فول وحمص',    img: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&q=85&w=400' },
+            { id: 'rice-pasta-grains',   en: 'Rice, Pasta & Grains',   ar: 'الأرز والمكرونة والحبوب',   descEn: 'Pasta, rice & grains', descAr: 'مكرونة، أرز وحبوب', img: 'https://images.unsplash.com/photo-1497802492746-aa584aa6ea22?auto=format&fit=crop&q=85&w=400' },
+            { id: 'dairy-eggs',          en: 'Dairy & Eggs',           ar: 'الألبان والأجبان',         descEn: 'Cheese & butter',     descAr: 'أجبان وزبدة',       img: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=85&w=400' },
+            { id: 'coffee-tea-drinks',   en: 'Coffee, Tea & Drinks',   ar: 'الشاي والقهوة والمشروبات', descEn: 'Tea, coffee & juices', descAr: 'شاي، قهوة وعصائر',  img: 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&q=85&w=400' },
+            { id: 'nuts-seeds-snacks',   en: 'Nuts, Seeds & Snacks',   ar: 'المكسرات واللب والتسالي',  descEn: 'Nuts & crunchy snacks', descAr: 'مكسرات ومقرمشات', img: 'https://images.unsplash.com/photo-1775210291462-af8fd54da403?auto=format&fit=crop&q=85&w=400' },
+            { id: 'sweets-biscuits',     en: 'Sweets & Biscuits',      ar: 'الحلويات والبسكويت',       descEn: 'Chocolate & baklava', descAr: 'شوكولاتة وبقلاوة',  img: 'https://images.unsplash.com/photo-1625414502495-0c35143e32d3?auto=format&fit=crop&q=85&w=400' },
+            { id: 'oils-spices-sauces',  en: 'Oils, Spices & Sauces',  ar: 'الزيوت والتوابل والصوصات', descEn: 'Herbs & oils',        descAr: 'أعشاب وزيوت',       img: 'https://images.unsplash.com/photo-1574484152510-903878da786c?auto=format&fit=crop&q=85&w=400' },
           ].map((cat) => (
-            <Link 
-              key={cat.id} 
+            <Link
+              key={cat.id}
               href={`/category/${cat.id}`}
-              className="group bg-white border border-light-border hover:border-gold rounded-2xl p-3 flex flex-col items-center text-center transition-all hover:shadow-md bg-white hover:-translate-y-1"
+              className="group bg-white border border-light-border hover:border-gold rounded-3xl p-4 flex flex-col items-center text-center transition-all shadow-xs hover:shadow-xl bg-white hover:-translate-y-1.5"
             >
-              <div className="w-20 h-20 rounded-full overflow-hidden border border-light-border bg-[#FAF7F0]/40 flex items-center justify-center shrink-0 mb-3.5">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={cat.img} alt={cat.en} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+              <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full shrink-0 mb-4 p-1 bg-gradient-to-br from-gold/40 via-light-border to-gold/10 group-hover:from-gold group-hover:to-primary/30 transition-colors">
+                <div className="w-full h-full rounded-full overflow-hidden border-2 border-white bg-[#FAF7F0]/40 flex items-center justify-center shadow-sm">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={cat.img} alt={cat.en} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                </div>
               </div>
               <strong className="block text-sm text-primary font-bold group-hover:text-gold transition-colors font-cairo">
                 {isAr ? cat.ar : cat.en}
