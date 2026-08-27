@@ -9,6 +9,7 @@ import { useLocaleStore } from '@/store/locale-store';
 import { useCartStore } from '@/store/cart-store';
 import { useAuthStore } from '@/store/auth-store';
 import ProductCard from '@/components/products/product-card';
+import { formatPrice } from '@/lib/utils';
 import { 
   ArrowRight, 
   Search, 
@@ -63,15 +64,24 @@ export default function HomePage() {
         // 4. Scrolling marquee strips: the admin controls exactly which
         // products appear by toggling the existing "Featured" / "Best
         // Seller" checkboxes on each product in the admin form — no code
-        // change needed to change what shows here. Falls back to the first
-        // 24 products only if nothing has been flagged yet, so the strip
-        // never looks empty before the admin has tagged anything. Capped at
-        // 24 per strip so the loop stays smooth.
+        // change needed to change what shows here. Only used once at least
+        // MIN_TAGGED products carry the flag — a couple of tagged products
+        // would otherwise repeat over and over in a 24-slot strip and look
+        // broken, so until enough are tagged this falls back to the full
+        // catalog instead (strip 1 takes the first half, strip 2 the second
+        // half, so the two strips don't just show the same items twice).
+        // Capped at 24 per strip so the loop stays smooth.
+        const MIN_TAGGED = 8;
         const featuredForMarquee = allProds.filter((p) => p.featured);
-        setMarqueeProducts((featuredForMarquee.length > 0 ? featuredForMarquee : allProds).slice(0, 24));
-
         const bestSellersForMarquee = allProds.filter((p) => p.bestSeller);
-        setMarqueeProducts2((bestSellersForMarquee.length > 0 ? bestSellersForMarquee : allProds.slice().reverse()).slice(0, 24));
+        const half = Math.ceil(allProds.length / 2);
+
+        setMarqueeProducts(
+          (featuredForMarquee.length >= MIN_TAGGED ? featuredForMarquee : allProds.slice(0, half)).slice(0, 24)
+        );
+        setMarqueeProducts2(
+          (bestSellersForMarquee.length >= MIN_TAGGED ? bestSellersForMarquee : allProds.slice(half)).slice(0, 24)
+        );
       } catch (err) {
         console.error('Failed to load homepage data:', err);
       } finally {
@@ -244,7 +254,7 @@ export default function HomePage() {
                         {isAr ? product.arabicName : product.name}
                       </strong>
                       <span className="block text-xs font-black text-primary mt-1">
-                        ${(product.price ?? 0).toFixed(2)}
+                        {formatPrice(product.purchaseOptions?.single?.price ?? 0, locale)}
                       </span>
                     </div>
                   </Link>
@@ -279,7 +289,7 @@ export default function HomePage() {
                         {isAr ? product.arabicName : product.name}
                       </strong>
                       <span className="block text-xs font-black text-primary mt-1">
-                        ${(product.price ?? 0).toFixed(2)}
+                        {formatPrice(product.purchaseOptions?.single?.price ?? 0, locale)}
                       </span>
                     </div>
                   </Link>
