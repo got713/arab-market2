@@ -355,12 +355,12 @@ export default function HomePage() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-6">
           {[
-            { id: 'frozen-foods',        en: 'Frozen Foods',           ar: 'المجمدات والمثلجات',       descEn: 'Vegetables & meals',  descAr: 'خضار ووجبات',       img: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&q=85&w=400' },
-            { id: 'canned-foods',        en: 'Canned Foods',           ar: 'الأطعمة المعلبة',          descEn: 'Tuna, fava & hommos', descAr: 'تونة، فول وحمص',    img: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&q=85&w=400' },
+            { id: 'frozen-foods',        en: 'Frozen Foods',           ar: 'المجمدات والمثلجات',       descEn: 'Vegetables & meals',  descAr: 'خضار ووجبات',       img: 'https://images.unsplash.com/photo-1622484964723-d1456419fcb0?auto=format&fit=crop&q=85&w=400' },
+            { id: 'canned-foods',        en: 'Canned Foods',           ar: 'الأطعمة المعلبة',          descEn: 'Tuna, fava & hommos', descAr: 'تونة، فول وحمص',    img: 'https://images.unsplash.com/photo-1626607007733-d09228471d9f?auto=format&fit=crop&q=85&w=400' },
             { id: 'rice-pasta-grains',   en: 'Rice, Pasta & Grains',   ar: 'الأرز والمكرونة والحبوب',   descEn: 'Pasta, rice & grains', descAr: 'مكرونة، أرز وحبوب', img: 'https://images.unsplash.com/photo-1497802492746-aa584aa6ea22?auto=format&fit=crop&q=85&w=400' },
-            { id: 'dairy-eggs',          en: 'Dairy & Eggs',           ar: 'الألبان والأجبان',         descEn: 'Cheese & butter',     descAr: 'أجبان وزبدة',       img: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=85&w=400' },
+            { id: 'dairy-eggs',          en: 'Dairy & Eggs',           ar: 'الألبان والأجبان',         descEn: 'Cheese & butter',     descAr: 'أجبان وزبدة',       img: 'https://images.unsplash.com/photo-1631379578550-7038263db699?auto=format&fit=crop&q=85&w=400' },
             { id: 'coffee-tea-drinks',   en: 'Coffee, Tea & Drinks',   ar: 'الشاي والقهوة والمشروبات', descEn: 'Tea, coffee & juices', descAr: 'شاي، قهوة وعصائر',  img: 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&q=85&w=400' },
-            { id: 'nuts-seeds-snacks',   en: 'Nuts, Seeds & Snacks',   ar: 'المكسرات واللب والتسالي',  descEn: 'Nuts & crunchy snacks', descAr: 'مكسرات ومقرمشات', img: 'https://images.unsplash.com/photo-1775210291462-af8fd54da403?auto=format&fit=crop&q=85&w=400' },
+            { id: 'nuts-seeds-snacks',   en: 'Nuts, Seeds & Snacks',   ar: 'المكسرات واللب والتسالي',  descEn: 'Nuts & crunchy snacks', descAr: 'مكسرات ومقرمشات', img: 'https://images.unsplash.com/photo-1525790428446-ad5140bdd234?auto=format&fit=crop&q=85&w=400' },
             { id: 'sweets-biscuits',     en: 'Sweets & Biscuits',      ar: 'الحلويات والبسكويت',       descEn: 'Chocolate & baklava', descAr: 'شوكولاتة وبقلاوة',  img: 'https://images.unsplash.com/photo-1625414502495-0c35143e32d3?auto=format&fit=crop&q=85&w=400' },
             { id: 'oils-spices-sauces',  en: 'Oils, Spices & Sauces',  ar: 'الزيوت والتوابل والصوصات', descEn: 'Herbs & oils',        descAr: 'أعشاب وزيوت',       img: 'https://images.unsplash.com/photo-1574484152510-903878da786c?auto=format&fit=crop&q=85&w=400' },
           ].map((cat) => (
