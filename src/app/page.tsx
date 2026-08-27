@@ -47,13 +47,43 @@ export default function HomePage() {
       setLoading(true);
       try {
         const allProds = await ProductService.getProducts(true);
-        
-        // 1. Best Sellers: Products marked as bestSeller
-        setBestSellers(allProds.filter((p) => p.bestSeller).slice(0, 6));
 
-        // 2. Egyptian Favorites: Tagged or Origin as Egypt
+        // Shared helper: start from a curated/tagged subset and top it up
+        // with random products (never repeating one already in the list)
+        // until it reaches `count`. Used everywhere below that shows a grid
+        // or strip of products, because a section that stops short of a
+        // full row leaves a visibly empty gap on the right (a 6-item list
+        // in a 4-column grid only fills 2 of the last row's 4 slots, etc.).
+        // Depending on live admin tagging ("Featured"/"Best Seller"/tags) to
+        // always hit the target count isn't reliable, so every section here
+        // tops up with random products so it always renders full and never
+        // looks sparse or broken — same fix already applied to the
+        // scrolling marquee strips below.
+        const freshShuffle = () =>
+          allProds
+            .map((p) => ({ p, sort: Math.random() }))
+            .sort((a, b) => a.sort - b.sort)
+            .map((x) => x.p);
+
+        const fillList = (tagged: Product[], count: number) => {
+          const randomPool = freshShuffle();
+          const ids = new Set(tagged.map((p) => p.id));
+          const topUp = randomPool.filter((p) => !ids.has(p.id));
+          return [...tagged, ...topUp].slice(0, count);
+        };
+
+        // 1. Best Sellers: Products marked as bestSeller, topped up to a
+        // full 6 (divides evenly into every breakpoint's column count —
+        // 2/3/6 — with no leftover empty cells) if fewer than 6 are
+        // actually tagged.
+        setBestSellers(fillList(allProds.filter((p) => p.bestSeller), 6));
+
+        // 2. Egyptian Favorites: Tagged or Origin as Egypt, same top-up.
         setEgyptianFavorites(
-          allProds.filter((p) => p.tags?.includes('Egyptian') || p.country?.toLowerCase() === 'egypt').slice(0, 6)
+          fillList(
+            allProds.filter((p) => p.tags?.includes('Egyptian') || p.country?.toLowerCase() === 'egypt'),
+            6
+          )
         );
 
         // 3. Buy Again: Simulating prior orders loading
@@ -61,33 +91,12 @@ export default function HomePage() {
           setBuyAgainProducts(allProds.slice(2, 6));
         }
 
-        // 4. Scrolling marquee strips: the admin can still steer these by
-        // toggling "Featured" / "Best Seller" on products in the admin form,
-        // but the strips must NEVER end up empty or barely-populated — a
-        // near-empty strip is what looked broken/blank on mobile. So: start
-        // from the tagged set, then top it up with random products (not
-        // already in the strip) until there are enough to fill a smooth
-        // loop. With no tags set at all, this is equivalent to just picking
-        // random products, which is fine — always having something to show
-        // matters more than the curation here.
-        const TARGET_COUNT = 16;
-        const shuffledA = allProds
-          .map((p) => ({ p, sort: Math.random() }))
-          .sort((a, b) => a.sort - b.sort)
-          .map((x) => x.p);
-        const shuffledB = allProds
-          .map((p) => ({ p, sort: Math.random() }))
-          .sort((a, b) => a.sort - b.sort)
-          .map((x) => x.p);
-
-        const fillStrip = (tagged: Product[], randomPool: Product[]) => {
-          const ids = new Set(tagged.map((p) => p.id));
-          const topUp = randomPool.filter((p) => !ids.has(p.id));
-          return [...tagged, ...topUp].slice(0, Math.max(TARGET_COUNT, tagged.length ? 0 : TARGET_COUNT));
-        };
-
-        setMarqueeProducts(fillStrip(allProds.filter((p) => p.featured), shuffledA));
-        setMarqueeProducts2(fillStrip(allProds.filter((p) => p.bestSeller), shuffledB));
+        // 4. Scrolling marquee strips: same top-up logic, just a bigger
+        // target since the strip loops continuously rather than filling a
+        // fixed grid.
+        const MARQUEE_TARGET_COUNT = 16;
+        setMarqueeProducts(fillList(allProds.filter((p) => p.featured), MARQUEE_TARGET_COUNT));
+        setMarqueeProducts2(fillList(allProds.filter((p) => p.bestSeller), MARQUEE_TARGET_COUNT));
       } catch (err) {
         console.error('Failed to load homepage data:', err);
       } finally {
@@ -456,7 +465,7 @@ export default function HomePage() {
           </div>
 
           {loading ? <Skeleton /> : egyptianFavorites.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5">
               {egyptianFavorites.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -485,7 +494,7 @@ export default function HomePage() {
         </div>
 
         {loading ? <Skeleton /> : bestSellers.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5">
             {bestSellers.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
