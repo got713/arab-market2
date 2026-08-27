@@ -61,27 +61,33 @@ export default function HomePage() {
           setBuyAgainProducts(allProds.slice(2, 6));
         }
 
-        // 4. Scrolling marquee strips: the admin controls exactly which
-        // products appear by toggling the existing "Featured" / "Best
-        // Seller" checkboxes on each product in the admin form — no code
-        // change needed to change what shows here. Only used once at least
-        // MIN_TAGGED products carry the flag — a couple of tagged products
-        // would otherwise repeat over and over in a 24-slot strip and look
-        // broken, so until enough are tagged this falls back to the full
-        // catalog instead (strip 1 takes the first half, strip 2 the second
-        // half, so the two strips don't just show the same items twice).
-        // Capped at 24 per strip so the loop stays smooth.
-        const MIN_TAGGED = 8;
-        const featuredForMarquee = allProds.filter((p) => p.featured);
-        const bestSellersForMarquee = allProds.filter((p) => p.bestSeller);
-        const half = Math.ceil(allProds.length / 2);
+        // 4. Scrolling marquee strips: the admin can still steer these by
+        // toggling "Featured" / "Best Seller" on products in the admin form,
+        // but the strips must NEVER end up empty or barely-populated — a
+        // near-empty strip is what looked broken/blank on mobile. So: start
+        // from the tagged set, then top it up with random products (not
+        // already in the strip) until there are enough to fill a smooth
+        // loop. With no tags set at all, this is equivalent to just picking
+        // random products, which is fine — always having something to show
+        // matters more than the curation here.
+        const TARGET_COUNT = 16;
+        const shuffledA = allProds
+          .map((p) => ({ p, sort: Math.random() }))
+          .sort((a, b) => a.sort - b.sort)
+          .map((x) => x.p);
+        const shuffledB = allProds
+          .map((p) => ({ p, sort: Math.random() }))
+          .sort((a, b) => a.sort - b.sort)
+          .map((x) => x.p);
 
-        setMarqueeProducts(
-          (featuredForMarquee.length >= MIN_TAGGED ? featuredForMarquee : allProds.slice(0, half)).slice(0, 24)
-        );
-        setMarqueeProducts2(
-          (bestSellersForMarquee.length >= MIN_TAGGED ? bestSellersForMarquee : allProds.slice(half)).slice(0, 24)
-        );
+        const fillStrip = (tagged: Product[], randomPool: Product[]) => {
+          const ids = new Set(tagged.map((p) => p.id));
+          const topUp = randomPool.filter((p) => !ids.has(p.id));
+          return [...tagged, ...topUp].slice(0, Math.max(TARGET_COUNT, tagged.length ? 0 : TARGET_COUNT));
+        };
+
+        setMarqueeProducts(fillStrip(allProds.filter((p) => p.featured), shuffledA));
+        setMarqueeProducts2(fillStrip(allProds.filter((p) => p.bestSeller), shuffledB));
       } catch (err) {
         console.error('Failed to load homepage data:', err);
       } finally {
@@ -320,7 +326,7 @@ export default function HomePage() {
               display: flex;
               gap: 1rem;
               width: max-content;
-              animation: marquee-scroll 45s linear infinite;
+              animation: marquee-scroll 22s linear infinite;
             }
             .marquee-track-reverse {
               animation-direction: reverse;
