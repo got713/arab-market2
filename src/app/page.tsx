@@ -33,6 +33,7 @@ export default function HomePage() {
   const [bestSellers, setBestSellers] = useState<Product[]>([]);
   const [egyptianFavorites, setEgyptianFavorites] = useState<Product[]>([]);
   const [buyAgainProducts, setBuyAgainProducts] = useState<Product[]>([]);
+  const [marqueeProducts, setMarqueeProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [homeSearchQuery, setHomeSearchQuery] = useState('');
 
@@ -57,6 +58,14 @@ export default function HomePage() {
         if (isAuthenticated) {
           setBuyAgainProducts(allProds.slice(2, 6));
         }
+
+        // 4. Scrolling marquee strip: pulls from the FULL catalog (no tag/
+        // flag filter) so it always reflects how many products the store
+        // actually has, unlike the curated sections above which can look
+        // sparse if few products are tagged Egyptian/bestSeller. Capped at
+        // 24 so the loop stays smooth rather than dragging in the whole
+        // catalog for a purely decorative strip.
+        setMarqueeProducts(allProds.slice(0, 24));
       } catch (err) {
         console.error('Failed to load homepage data:', err);
       } finally {
@@ -183,6 +192,88 @@ export default function HomePage() {
           </button>
         </form>
       </section>
+
+      {/* 2.5 SCROLLING PRODUCT MARQUEE — an always-full-looking strip that
+          auto-scrolls through the catalog regardless of tags/flags, so a
+          visitor sees "lots of products" immediately, even before the
+          curated (and sometimes sparse) sections below load in. Pauses on
+          hover so a product is still clickable. The product list is
+          rendered twice back-to-back and the animation moves exactly one
+          copy's width, so the loop has no visible seam. */}
+      {!loading && marqueeProducts.length > 0 && (
+        <section className="border-y border-light-border/60 bg-white py-8 overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-5 flex items-center justify-between">
+            <h2 className="text-sm sm:text-base font-black text-primary font-cairo uppercase tracking-wide">
+              {isAr ? 'تصفح تشكيلتنا الواسعة' : 'Browse Our Wide Selection'}
+            </h2>
+            <Link href="/shop" className="text-xs font-bold text-primary hover:text-gold flex items-center gap-0.5 shrink-0">
+              <span>{isAr ? 'عرض كل المنتجات' : 'View All Products'}</span>
+              <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
+            </Link>
+          </div>
+
+          <div className="marquee-viewport">
+            <div className="marquee-track">
+              {[...marqueeProducts, ...marqueeProducts].map((product, idx) => (
+                <Link
+                  key={`${product.id}-${idx}`}
+                  href={`/product/${product.slug}`}
+                  className="marquee-item group bg-white border border-light-border rounded-xl overflow-hidden hover:border-gold hover:shadow-md transition-all shrink-0"
+                >
+                  <div className="w-full aspect-square bg-[#FAF7F0]/40 overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={product.images?.[0]}
+                      alt={isAr ? product.arabicName : product.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://placehold.co/300x300/FDF8F0/6B6355?text=No+Image';
+                      }}
+                    />
+                  </div>
+                  <div className="p-2.5">
+                    <strong className="block text-xs text-dark font-bold font-cairo leading-tight line-clamp-1">
+                      {isAr ? product.arabicName : product.name}
+                    </strong>
+                    <span className="block text-xs font-black text-primary mt-1">
+                      ${(product.price ?? 0).toFixed(2)}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <style>{`
+            .marquee-viewport {
+              width: 100%;
+              overflow: hidden;
+              -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+              mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+            }
+            .marquee-track {
+              display: flex;
+              gap: 1rem;
+              width: max-content;
+              padding: 0 1rem;
+              animation: marquee-scroll 45s linear infinite;
+            }
+            .marquee-viewport:hover .marquee-track {
+              animation-play-state: paused;
+            }
+            .marquee-item {
+              width: 140px;
+            }
+            @media (min-width: 640px) {
+              .marquee-item { width: 168px; }
+            }
+            @keyframes marquee-scroll {
+              from { transform: translateX(0); }
+              to { transform: translateX(-50%); }
+            }
+          `}</style>
+        </section>
+      )}
 
       {/* 3. SHOP BY CATEGORY */}
       <section id="categories-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
