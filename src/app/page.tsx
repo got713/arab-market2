@@ -34,6 +34,7 @@ export default function HomePage() {
   const [egyptianFavorites, setEgyptianFavorites] = useState<Product[]>([]);
   const [buyAgainProducts, setBuyAgainProducts] = useState<Product[]>([]);
   const [marqueeProducts, setMarqueeProducts] = useState<Product[]>([]);
+  const [marqueeProducts2, setMarqueeProducts2] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [homeSearchQuery, setHomeSearchQuery] = useState('');
 
@@ -59,13 +60,18 @@ export default function HomePage() {
           setBuyAgainProducts(allProds.slice(2, 6));
         }
 
-        // 4. Scrolling marquee strip: pulls from the FULL catalog (no tag/
-        // flag filter) so it always reflects how many products the store
-        // actually has, unlike the curated sections above which can look
-        // sparse if few products are tagged Egyptian/bestSeller. Capped at
-        // 24 so the loop stays smooth rather than dragging in the whole
-        // catalog for a purely decorative strip.
-        setMarqueeProducts(allProds.slice(0, 24));
+        // 4. Scrolling marquee strips: the admin controls exactly which
+        // products appear by toggling the existing "Featured" / "Best
+        // Seller" checkboxes on each product in the admin form — no code
+        // change needed to change what shows here. Falls back to the first
+        // 24 products only if nothing has been flagged yet, so the strip
+        // never looks empty before the admin has tagged anything. Capped at
+        // 24 per strip so the loop stays smooth.
+        const featuredForMarquee = allProds.filter((p) => p.featured);
+        setMarqueeProducts((featuredForMarquee.length > 0 ? featuredForMarquee : allProds).slice(0, 24));
+
+        const bestSellersForMarquee = allProds.filter((p) => p.bestSeller);
+        setMarqueeProducts2((bestSellersForMarquee.length > 0 ? bestSellersForMarquee : allProds.slice().reverse()).slice(0, 24));
       } catch (err) {
         console.error('Failed to load homepage data:', err);
       } finally {
@@ -200,9 +206,9 @@ export default function HomePage() {
           hover so a product is still clickable. The product list is
           rendered twice back-to-back and the animation moves exactly one
           copy's width, so the loop has no visible seam. */}
-      {!loading && marqueeProducts.length > 0 && (
-        <section className="border-y border-light-border/60 bg-white py-8 overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-5 flex items-center justify-between">
+      {!loading && (marqueeProducts.length > 0 || marqueeProducts2.length > 0) && (
+        <section className="border-y border-light-border/60 bg-white py-8 overflow-hidden space-y-5">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
             <h2 className="text-sm sm:text-base font-black text-primary font-cairo uppercase tracking-wide">
               {isAr ? 'تصفح تشكيلتنا الواسعة' : 'Browse Our Wide Selection'}
             </h2>
@@ -212,42 +218,91 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="marquee-viewport">
-            <div className="marquee-track">
-              {[...marqueeProducts, ...marqueeProducts].map((product, idx) => (
-                <Link
-                  key={`${product.id}-${idx}`}
-                  href={`/product/${product.slug}`}
-                  className="marquee-item group bg-white border border-light-border rounded-xl overflow-hidden hover:border-gold hover:shadow-md transition-all shrink-0"
-                >
-                  <div className="w-full aspect-square bg-[#FAF7F0]/40 overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={product.images?.[0]}
-                      alt={isAr ? product.arabicName : product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://placehold.co/300x300/FDF8F0/6B6355?text=No+Image';
-                      }}
-                    />
-                  </div>
-                  <div className="p-2.5">
-                    <strong className="block text-xs text-dark font-bold font-cairo leading-tight line-clamp-1">
-                      {isAr ? product.arabicName : product.name}
-                    </strong>
-                    <span className="block text-xs font-black text-primary mt-1">
-                      ${(product.price ?? 0).toFixed(2)}
-                    </span>
-                  </div>
-                </Link>
-              ))}
+          {/* Strip 1: admin's "Featured" products, scrolling one way */}
+          {marqueeProducts.length > 0 && (
+            <div className="marquee-viewport">
+              <div className="marquee-track">
+                {[...marqueeProducts, ...marqueeProducts].map((product, idx) => (
+                  <Link
+                    key={`m1-${product.id}-${idx}`}
+                    href={`/product/${product.slug}`}
+                    className="marquee-item group bg-white border border-light-border rounded-xl overflow-hidden hover:border-gold hover:shadow-md transition-all shrink-0"
+                  >
+                    <div className="w-full aspect-square bg-[#FAF7F0]/40 overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={product.images?.[0]}
+                        alt={isAr ? product.arabicName : product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://placehold.co/300x300/FDF8F0/6B6355?text=No+Image';
+                        }}
+                      />
+                    </div>
+                    <div className="p-2.5">
+                      <strong className="block text-xs text-dark font-bold font-cairo leading-tight line-clamp-1">
+                        {isAr ? product.arabicName : product.name}
+                      </strong>
+                      <span className="block text-xs font-black text-primary mt-1">
+                        ${(product.price ?? 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Strip 2: admin's "Best Seller" products, scrolling the opposite way */}
+          {marqueeProducts2.length > 0 && (
+            <div className="marquee-viewport">
+              <div className="marquee-track marquee-track-reverse">
+                {[...marqueeProducts2, ...marqueeProducts2].map((product, idx) => (
+                  <Link
+                    key={`m2-${product.id}-${idx}`}
+                    href={`/product/${product.slug}`}
+                    className="marquee-item group bg-white border border-light-border rounded-xl overflow-hidden hover:border-gold hover:shadow-md transition-all shrink-0"
+                  >
+                    <div className="w-full aspect-square bg-[#FAF7F0]/40 overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={product.images?.[0]}
+                        alt={isAr ? product.arabicName : product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://placehold.co/300x300/FDF8F0/6B6355?text=No+Image';
+                        }}
+                      />
+                    </div>
+                    <div className="p-2.5">
+                      <strong className="block text-xs text-dark font-bold font-cairo leading-tight line-clamp-1">
+                        {isAr ? product.arabicName : product.name}
+                      </strong>
+                      <span className="block text-xs font-black text-primary mt-1">
+                        ${(product.price ?? 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           <style>{`
+            /* Padding lives on the viewport (fixed-width, doesn't affect the
+               track's own measured width) rather than on the track itself.
+               Putting it on the track used to add 2rem to the track's total
+               width unevenly around the two duplicated product sets, so the
+               halfway point of the translateX animation didn't line up
+               exactly with the seam between the two copies — that mismatch
+               is what caused the visible jump/gap once the loop restarted.
+               With the padding moved here, the track's width is purely two
+               equal copies of the product set, so -50% always lands exactly
+               on the seam and the loop is invisible. */
             .marquee-viewport {
               width: 100%;
               overflow: hidden;
+              padding: 0 1rem;
               -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
               mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
             }
@@ -255,8 +310,10 @@ export default function HomePage() {
               display: flex;
               gap: 1rem;
               width: max-content;
-              padding: 0 1rem;
               animation: marquee-scroll 45s linear infinite;
+            }
+            .marquee-track-reverse {
+              animation-direction: reverse;
             }
             .marquee-viewport:hover .marquee-track {
               animation-play-state: paused;
