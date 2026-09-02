@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { useLocaleStore } from '@/store/locale-store';
 import { useCartStore } from '@/store/cart-store';
@@ -26,7 +26,19 @@ import {
 } from 'lucide-react';
 
 export default function AccountPage() {
+  return (
+    <Suspense fallback={null}>
+      <AccountPageContent />
+    </Suspense>
+  );
+}
+
+// useSearchParams() requires a Suspense boundary around the component that
+// calls it (Next.js App Router), hence the small wrapper above — the actual
+// page content is unchanged aside from that.
+function AccountPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t, locale } = useLocaleStore();
   const { user, isAdmin, isAuthenticated, loginWithCredentials, registerCustomer, logout, updateProfile } = useAuthStore();
   const addToCart = useCartStore((state) => state.addToCart);
@@ -95,6 +107,23 @@ export default function AccountPage() {
       loadOrders();
     }
   }, [isAuthenticated]);
+
+  // Admin-access guard (admin/layout.tsx) sends unauthenticated/non-admin
+  // visitors here as /account?redirect=/admin so they can sign in and then
+  // continue on to the dashboard. That flow only worked for a FRESH login
+  // submitted on this page (see handleLoginSubmit below) — an admin who was
+  // already authenticated (persisted session) when they landed here just saw
+  // the normal customer account view forever, with the redirect param never
+  // consumed. Forward them on as soon as we know they're an authenticated
+  // admin and a redirect target was requested.
+  useEffect(() => {
+    if (isAuthenticated && isAdmin) {
+      const redirectTo = searchParams.get('redirect');
+      if (redirectTo && redirectTo.startsWith('/')) {
+        router.push(redirectTo);
+      }
+    }
+  }, [isAuthenticated, isAdmin, searchParams, router]);
 
   const syncCartWithServer = useCartStore((state) => state.syncCartWithServer);
 
