@@ -45,9 +45,14 @@ export const CategoryService = {
     return Array.isArray(raw) ? raw.map(mapCategory) : [];
   },
 
+  // Admin-only usage (the /admin/categories/[id] edit screen) — passes
+  // ?all=true so it also gets back inactive subcategories to manage
+  // (activate/deactivate), not just the active ones the storefront sees.
+  // Harmless for a non-admin caller: the backend only honors `all` for an
+  // authenticated admin, ignoring it otherwise.
   getCategoryById: async (id: string, locale: 'en' | 'ar' = 'en'): Promise<Category | null> => {
     try {
-      const raw = await ApiClient.get<any>(`/categories/${id}`, undefined, locale);
+      const raw = await ApiClient.get<any>(`/categories/${id}`, { params: { all: 'true' } }, locale);
       return raw ? mapCategory(raw) : null;
     } catch (err) {
       return null;
