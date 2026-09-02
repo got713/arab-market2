@@ -115,8 +115,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="flex min-h-screen bg-[#FAF7F0] text-dark overflow-hidden font-sans" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       
-      {/* Sidebar Navigation — Desktop */}
-      <aside className="hidden lg:flex flex-col w-64 bg-primary text-white shrink-0 border-r border-primary-dark/40 rtl:border-r-0 rtl:border-l">
+      {/* Sidebar Navigation — Desktop.
+          sticky + h-screen keeps it pinned in the viewport even if some
+          ancestor ends up being what actually scrolls (e.g. a long page
+          like /admin/inventory growing taller than `main`'s own
+          overflow-y-auto box) — min-h-screen alone only sets a minimum,
+          it doesn't stop the sidebar from scrolling away with the rest of
+          the flex row once content pushes everything taller than one
+          viewport. */}
+      <aside className="hidden lg:flex flex-col w-64 h-screen sticky top-0 bg-primary text-white shrink-0 border-r border-primary-dark/40 rtl:border-r-0 rtl:border-l">
         <div className="p-5 border-b border-primary-dark/40 flex items-center justify-between bg-primary-dark/25">
           <Link href="/" className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-gold/10 flex items-center justify-center shrink-0">
