@@ -36,6 +36,11 @@ function ShopContent() {
   const [filterBy, setFilterBy] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  // A ?subcategory=<slug> link (e.g. from the category page's subcategory
+  // chips) names the subcategory by slug, but selectedSubcategory is keyed
+  // by numeric subcategory_id (to match Product.subcategoryId). Hold the
+  // slug here until categoriesList has loaded so it can be resolved below.
+  const [pendingSubcategorySlug, setPendingSubcategorySlug] = useState<string | null>(null);
 
   const [categoriesList, setCategoriesList] = useState<Category[]>([]);
 
@@ -87,7 +92,25 @@ function ShopContent() {
     } else {
       setSelectedTag(null);
     }
+
+    const subcategoryParam = searchParams?.get('subcategory');
+    setPendingSubcategorySlug(subcategoryParam || null);
   }, [searchParams]);
+
+  // Resolve a pending ?subcategory=<slug> once both the category filter and
+  // the category list (which carries each subcategory's numeric id) are
+  // available, then expand that category's sidebar group so the active
+  // subcategory is visible.
+  useEffect(() => {
+    if (!pendingSubcategorySlug || selectedCategories.length === 0 || categoriesList.length === 0) return;
+    const cat = categoriesList.find((c) => c.slug === selectedCategories[0]);
+    const sub = cat?.subcategories?.find((s: any) => s.slug === pendingSubcategorySlug);
+    if (sub) {
+      setSelectedSubcategory(String((sub as any).id ?? sub.slug));
+      setExpandedCategory(cat!.slug);
+    }
+    setPendingSubcategorySlug(null);
+  }, [pendingSubcategorySlug, selectedCategories, categoriesList]);
 
   // Apply filters and sorting
   useEffect(() => {
